@@ -23,6 +23,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.IBinder;
 
+/**
+ * 同步服务的壳：把一次同步交给后台任务，并用广播把进度回传给界面。
+ * 用 Service 而非直接 new AsyncTask，是因为同步要在用户离开界面后继续；
+ * 静态 mSyncTask 让“是否正在同步”可被任意界面查询，代价是进程内单实例。
+ */
 public class GTaskSyncService extends Service {
     public final static String ACTION_STRING_NAME = "sync_action_type";
 
@@ -42,6 +47,9 @@ public class GTaskSyncService extends Service {
 
     private static String mSyncProgress = "";
 
+    // 已有任务在跑就直接返回（幂等），避免连点两下起两个后台任务。
+    // 启动前先广播一次空进度，让界面立刻切到“同步中”，
+    // 而不是等第一个进度回调到达才变状态。
     private void startSync() {
         if (mSyncTask == null) {
             mSyncTask = new GTaskASyncTask(this, new GTaskASyncTask.OnCompleteListener() {
@@ -68,6 +76,9 @@ public class GTaskSyncService extends Service {
     }
 
     @Override
+    // 用 Intent 里的 action 值区分“开始”与“取消”，未知值落到默认分支被忽略；
+    // 返回 START_STICKY 让系统在内存回收后重建服务，
+    // 但重建时 intent 可能为 null，故先判 bundle 是否为空再取值。
     public int onStartCommand(Intent intent, int flags, int startId) {
         Bundle bundle = intent.getExtras();
         if (bundle != null && bundle.containsKey(ACTION_STRING_NAME)) {
@@ -87,6 +98,7 @@ public class GTaskSyncService extends Service {
     }
 
     @Override
+    // 内存紧张时主动取消同步：硬撑下去可能被系统杀掉，留下半同步状态更难恢复。
     public void onLowMemory() {
         if (mSyncTask != null) {
             mSyncTask.cancelSync();
