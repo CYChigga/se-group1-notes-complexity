@@ -16,6 +16,12 @@
 
 package net.micode.notes.gtask.exception;
 
+/**
+ * 同步链路的“内部状态错误”：请求本身合法，但本地数据或协议状态不允许完成。
+ * 典型场景：便签找不到父目录映射、远端 JSON 结构不符合预期、更新时 id 非法。
+ * 与 NetworkFailureException 相对——它不可通过重试恢复，故继承 RuntimeException，
+ * 免去每层方法签名声明受检异常；最终由 GTaskManager.sync 统一映射为 STATE_INTERNAL_ERROR。
+ */
 public class ActionFailureException extends RuntimeException {
     private static final long serialVersionUID = 4425249765923293627L;
 
