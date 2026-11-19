@@ -53,38 +53,66 @@ public class NotesDatabaseHelper extends SQLiteOpenHelper {
     // 建 note 表的 SQL，字段定义和 Notes.NoteColumns 里的常量一一对应
     private static final String CREATE_NOTE_TABLE_SQL =
         "CREATE TABLE " + TABLE.NOTE + "(" +
+            // 主键自增 id
             NoteColumns.ID + " INTEGER PRIMARY KEY," +
+            // 父级 id，0 表示挂在根文件夹下
             NoteColumns.PARENT_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // 提醒时间，0 表示没有提醒
             NoteColumns.ALERTED_DATE + " INTEGER NOT NULL DEFAULT 0," +
+            // 背景颜色 id，0 是默认颜色
             NoteColumns.BG_COLOR_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // 创建时间，默认取当前时间戳（秒转毫秒）
             NoteColumns.CREATED_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)," +
+            // 是否有附件
             NoteColumns.HAS_ATTACHMENT + " INTEGER NOT NULL DEFAULT 0," +
+            // 修改时间，同创建时间默认当前时间
             NoteColumns.MODIFIED_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)," +
+            // 文件夹下的便签数量，由触发器维护
             NoteColumns.NOTES_COUNT + " INTEGER NOT NULL DEFAULT 0," +
+            // 摘要，文件夹存名字，便签存正文开头
             NoteColumns.SNIPPET + " TEXT NOT NULL DEFAULT ''," +
+            // 记录类型，0 便签、1 文件夹、2 系统文件夹
             NoteColumns.TYPE + " INTEGER NOT NULL DEFAULT 0," +
+            // 绑定的桌面小部件 id
             NoteColumns.WIDGET_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // 小部件尺寸类型
             NoteColumns.WIDGET_TYPE + " INTEGER NOT NULL DEFAULT -1," +
+            // 同步 id
             NoteColumns.SYNC_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // 本地是否改动过，1 表示改了待同步
             NoteColumns.LOCAL_MODIFIED + " INTEGER NOT NULL DEFAULT 0," +
+            // 移入临时文件夹前的原父级
             NoteColumns.ORIGIN_PARENT_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // Google Tasks 任务 id，未同步时为空串
             NoteColumns.GTASK_ID + " TEXT NOT NULL DEFAULT ''," +
+            // 版本号，每次修改加一
             NoteColumns.VERSION + " INTEGER NOT NULL DEFAULT 0" +
         ")";
 
     // 建 data 表的 SQL，data 表存便签的正文内容
     private static final String CREATE_DATA_TABLE_SQL =
         "CREATE TABLE " + TABLE.DATA + "(" +
+            // 主键自增 id
             DataColumns.ID + " INTEGER PRIMARY KEY," +
+            // MIME 类型，区分文本便签还是通话记录
             DataColumns.MIME_TYPE + " TEXT NOT NULL," +
+            // 所属便签 id，关联 note 表
             DataColumns.NOTE_ID + " INTEGER NOT NULL DEFAULT 0," +
+            // 创建时间
             NoteColumns.CREATED_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)," +
+            // 修改时间
             NoteColumns.MODIFIED_DATE + " INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)," +
+            // 正文内容
             DataColumns.CONTENT + " TEXT NOT NULL DEFAULT ''," +
+            // 通用字段 1，整数，含义随 MIME 类型变化
             DataColumns.DATA1 + " INTEGER," +
+            // 通用字段 2，整数
             DataColumns.DATA2 + " INTEGER," +
+            // 通用字段 3，文本
             DataColumns.DATA3 + " TEXT NOT NULL DEFAULT ''," +
+            // 通用字段 4，文本
             DataColumns.DATA4 + " TEXT NOT NULL DEFAULT ''," +
+            // 通用字段 5，文本
             DataColumns.DATA5 + " TEXT NOT NULL DEFAULT ''" +
         ")";
 
