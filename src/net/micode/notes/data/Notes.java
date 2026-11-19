@@ -17,24 +17,24 @@
 package net.micode.notes.data;
 
 import android.net.Uri;
+// 数据契约类：集中定义便签的 authority、URI、MIME 类型和表字段常量
+// 其它包都通过这里的常量访问数据，避免各写各的字符串
 public class Notes {
+    // content provider 的 authority，uri 里的主机名部分
     public static final String AUTHORITY = "micode_notes";
     public static final String TAG = "Notes";
+    // 类型常量：普通便签、文件夹、系统文件夹
     public static final int TYPE_NOTE     = 0;
     public static final int TYPE_FOLDER   = 1;
     public static final int TYPE_SYSTEM   = 2;
 
-    /**
-     * Following IDs are system folders' identifiers
-     * {@link Notes#ID_ROOT_FOLDER } is default folder
-     * {@link Notes#ID_TEMPARAY_FOLDER } is for notes belonging no folder
-     * {@link Notes#ID_CALL_RECORD_FOLDER} is to store call records
-     */
+    // 系统文件夹的固定 id，都是 0 或负数，用来和用户文件夹区分
     public static final int ID_ROOT_FOLDER = 0;
     public static final int ID_TEMPARAY_FOLDER = -1;
     public static final int ID_CALL_RECORD_FOLDER = -2;
     public static final int ID_TRASH_FOLER = -3;
 
+    // Intent 传参时用的 key，跨组件传值统一用这些常量
     public static final String INTENT_EXTRA_ALERT_DATE = "net.micode.notes.alert_date";
     public static final String INTENT_EXTRA_BACKGROUND_ID = "net.micode.notes.background_color_id";
     public static final String INTENT_EXTRA_WIDGET_ID = "net.micode.notes.widget_id";
@@ -42,232 +42,135 @@ public class Notes {
     public static final String INTENT_EXTRA_FOLDER_ID = "net.micode.notes.folder_id";
     public static final String INTENT_EXTRA_CALL_DATE = "net.micode.notes.call_date";
 
+    // 桌面小部件类型：-1 无效，0 是 2x，1 是 4x
     public static final int TYPE_WIDGET_INVALIDE      = -1;
     public static final int TYPE_WIDGET_2X            = 0;
     public static final int TYPE_WIDGET_4X            = 1;
 
+    // 两种数据类型的 MIME 类型常量
     public static class DataConstants {
         public static final String NOTE = TextNote.CONTENT_ITEM_TYPE;
         public static final String CALL_NOTE = CallNote.CONTENT_ITEM_TYPE;
     }
 
-    /**
-     * Uri to query all notes and folders
-     */
+    // 查询所有便签和文件夹的 uri
     public static final Uri CONTENT_NOTE_URI = Uri.parse("content://" + AUTHORITY + "/note");
 
-    /**
-     * Uri to query data
-     */
+    // 查询便签正文数据的 uri
     public static final Uri CONTENT_DATA_URI = Uri.parse("content://" + AUTHORITY + "/data");
 
+    // note 表的字段名常量
     public interface NoteColumns {
-        /**
-         * The unique ID for a row
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 行唯一 id，INTEGER(long)
         public static final String ID = "_id";
 
-        /**
-         * The parent's id for note or folder
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 所属父级 id（便签的父是文件夹，文件夹的父是上一级文件夹），INTEGER(long)
         public static final String PARENT_ID = "parent_id";
 
-        /**
-         * Created data for note or folder
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 创建时间，INTEGER(long)，单位毫秒
         public static final String CREATED_DATE = "created_date";
 
-        /**
-         * Latest modified date
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 最后修改时间，INTEGER(long)
         public static final String MODIFIED_DATE = "modified_date";
 
-
-        /**
-         * Alert date
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 提醒时间，INTEGER(long)
         public static final String ALERTED_DATE = "alert_date";
 
-        /**
-         * Folder's name or text content of note
-         * <P> Type: TEXT </P>
-         */
+        // 文件夹名或便签的文本内容摘要，TEXT
         public static final String SNIPPET = "snippet";
 
-        /**
-         * Note's widget id
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 关联的桌面小部件 id，INTEGER(long)
         public static final String WIDGET_ID = "widget_id";
 
-        /**
-         * Note's widget type
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 桌面小部件类型，INTEGER(long)
         public static final String WIDGET_TYPE = "widget_type";
 
-        /**
-         * Note's background color's id
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 便签背景颜色 id，INTEGER(long)
         public static final String BG_COLOR_ID = "bg_color_id";
 
-        /**
-         * For text note, it doesn't has attachment, for multi-media
-         * note, it has at least one attachment
-         * <P> Type: INTEGER </P>
-         */
+        // 是否有附件，文本便签没有附件，多媒体便签至少一个，INTEGER
         public static final String HAS_ATTACHMENT = "has_attachment";
 
-        /**
-         * Folder's count of notes
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 文件夹里的便签数量，INTEGER(long)
         public static final String NOTES_COUNT = "notes_count";
 
-        /**
-         * The file type: folder or note
-         * <P> Type: INTEGER </P>
-         */
+        // 记录类型：文件夹还是便签，INTEGER
         public static final String TYPE = "type";
 
-        /**
-         * The last sync id
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 最后同步 id，INTEGER(long)
         public static final String SYNC_ID = "sync_id";
 
-        /**
-         * Sign to indicate local modified or not
-         * <P> Type: INTEGER </P>
-         */
+        // 标记本地是否被修改过，INTEGER
         public static final String LOCAL_MODIFIED = "local_modified";
 
-        /**
-         * Original parent id before moving into temporary folder
-         * <P> Type : INTEGER </P>
-         */
+        // 移入临时文件夹之前的原始父级 id，INTEGER
         public static final String ORIGIN_PARENT_ID = "origin_parent_id";
 
-        /**
-         * The gtask id
-         * <P> Type : TEXT </P>
-         */
+        // Google Tasks 的远端任务 id，TEXT
         public static final String GTASK_ID = "gtask_id";
 
-        /**
-         * The version code
-         * <P> Type : INTEGER (long) </P>
-         */
+        // 版本号，每次修改 +1，用于同步冲突判断，INTEGER(long)
         public static final String VERSION = "version";
     }
 
+    // data 表的字段名常量
     public interface DataColumns {
-        /**
-         * The unique ID for a row
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 行唯一 id，INTEGER(long)
         public static final String ID = "_id";
 
-        /**
-         * The MIME type of the item represented by this row.
-         * <P> Type: Text </P>
-         */
+        // 该行数据的 MIME 类型，TEXT
         public static final String MIME_TYPE = "mime_type";
 
-        /**
-         * The reference id to note that this data belongs to
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 该数据所属便签的 id，INTEGER(long)
         public static final String NOTE_ID = "note_id";
 
-        /**
-         * Created data for note or folder
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 创建时间，INTEGER(long)
         public static final String CREATED_DATE = "created_date";
 
-        /**
-         * Latest modified date
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 最后修改时间，INTEGER(long)
         public static final String MODIFIED_DATE = "modified_date";
 
-        /**
-         * Data's content
-         * <P> Type: TEXT </P>
-         */
+        // 数据内容，TEXT
         public static final String CONTENT = "content";
 
-
-        /**
-         * Generic data column, the meaning is {@link #MIMETYPE} specific, used for
-         * integer data type
-         * <P> Type: INTEGER </P>
-         */
+        // 通用字段，具体含义由 MIME 类型决定，整数类型
         public static final String DATA1 = "data1";
 
-        /**
-         * Generic data column, the meaning is {@link #MIMETYPE} specific, used for
-         * integer data type
-         * <P> Type: INTEGER </P>
-         */
+        // 通用字段，整数类型
         public static final String DATA2 = "data2";
 
-        /**
-         * Generic data column, the meaning is {@link #MIMETYPE} specific, used for
-         * TEXT data type
-         * <P> Type: TEXT </P>
-         */
+        // 通用字段，文本类型
         public static final String DATA3 = "data3";
 
-        /**
-         * Generic data column, the meaning is {@link #MIMETYPE} specific, used for
-         * TEXT data type
-         * <P> Type: TEXT </P>
-         */
+        // 通用字段，文本类型
         public static final String DATA4 = "data4";
 
-        /**
-         * Generic data column, the meaning is {@link #MIMETYPE} specific, used for
-         * TEXT data type
-         * <P> Type: TEXT </P>
-         */
+        // 通用字段，文本类型
         public static final String DATA5 = "data5";
     }
 
+    // 文本便签的专属常量，DATA1 被用作清单模式标记
     public static final class TextNote implements DataColumns {
-        /**
-         * Mode to indicate the text in check list mode or not
-         * <P> Type: Integer 1:check list mode 0: normal mode </P>
-         */
+        // 文本便签是否为清单模式，1 是清单，0 是普通模式，INTEGER
         public static final String MODE = DATA1;
 
         public static final int MODE_CHECK_LIST = 1;
 
+        // 多条文本便签的 MIME 类型
         public static final String CONTENT_TYPE = "vnd.android.cursor.dir/text_note";
 
+        // 单条文本便签的 MIME 类型
         public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/text_note";
 
         public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/text_note");
     }
 
+    // 通话记录便签的专属常量，DATA1 存通话日期，DATA3 存号码
     public static final class CallNote implements DataColumns {
-        /**
-         * Call date for this record
-         * <P> Type: INTEGER (long) </P>
-         */
+        // 通话日期，INTEGER(long)
         public static final String CALL_DATE = DATA1;
 
-        /**
-         * Phone number for this record
-         * <P> Type: TEXT </P>
-         */
+        // 电话号码，TEXT
         public static final String PHONE_NUMBER = DATA3;
 
         public static final String CONTENT_TYPE = "vnd.android.cursor.dir/call_note";
