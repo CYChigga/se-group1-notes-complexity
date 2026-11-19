@@ -1,0 +1,38 @@
+历史自动复现日志：以下保留初版生成时状态。当前孙浩人工审定已完成（用户确认），以manual_review_status.json为准。
+
+{
+  "java_files": 39,
+  "named_types": 65,
+  "methods_with_body": 448,
+  "constructors": 38,
+  "mean_method_sloc": 12.792410714285714,
+  "file_sloc": 7395,
+  "physical_lines": 10002,
+  "mean_scope": "所有有实现的方法，含内部类和匿名类方法；不含构造器及接口无实现声明",
+  "nested_scope": "父方法范围包含匿名类声明及其方法，因此父子方法范围可能重叠，不将方法SLOC求和冒充项目SLOC",
+  "sloc_scope": "从声明所在行至配对结束花括号；仅计算至少有Java词法token的物理行，含声明及独立花括号行",
+  "operator_scope": "扩展词法口径：Operator、Separator、Keyword、BasicType、Modifier的不同token值；不计标识符和字面量，不等同于完整Halstead指标",
+  "errors": []
+}
+{
+  "java_files": 39,
+  "named_types": 65,
+  "methods_with_body": 448,
+  "constructors": 38,
+  "mean_method_sloc": 12.792410714285714,
+  "file_sloc": 7395,
+  "physical_lines": 10300,
+  "mean_scope": "所有有实现的方法，含内部类和匿名类方法；不含构造器及接口无实现声明",
+  "nested_scope": "父方法范围包含匿名类声明及其方法，因此父子方法范围可能重叠，不将方法SLOC求和冒充项目SLOC",
+  "sloc_scope": "从声明所在行至配对结束花括号；仅计算至少有Java词法token的物理行，含声明及独立花括号行",
+  "operator_scope": "扩展词法口径：Operator、Separator、Keyword、BasicType、Modifier的不同token值；不计标识符和字面量，不等同于完整Halstead指标",
+  "errors": []
+}
+{
+  "changed_java_files": 6,
+  "token_equivalent": true,
+  "method_metrics_equal": true,
+  "java_parse": "39个文件均通过Java 7语法解析",
+  "android_runtime": "未编译、未运行Android应用",
+  "human_review": "待孙浩及王一帆人工审定"
+}

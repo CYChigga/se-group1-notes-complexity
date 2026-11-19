@@ -1,0 +1,13 @@
+flowchart LR
+ UI[编辑界面] --> W[WorkingNote 会话状态]
+ W --> N[Note 主表差量]
+ N --> ND[NoteData 正文与通话差量]
+ N --> CR[ContentResolver]
+ ND --> CR
+ CR --> P[Notes Provider 数据库]
+ W --> RP[ResourceParser 资源映射]
+ W --> L[NoteSettingChangedListener]
+ L --> UI
+ BU[BackupUtils] --> CR
+ DU[DataUtils] --> CR
+ GS[GTaskStringUtils 协议常量] --> S[gtask 同步读写]

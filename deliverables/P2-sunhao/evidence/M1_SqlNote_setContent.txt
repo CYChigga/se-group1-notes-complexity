@@ -1,0 +1,132 @@
+ 229:     public boolean setContent(JSONObject js) {
+ 230:         try {
+ 231:             JSONObject note = js.getJSONObject(GTaskStringUtils.META_HEAD_NOTE);
+ 232:             if (note.getInt(NoteColumns.TYPE) == Notes.TYPE_SYSTEM) {
+ 233:                 Log.w(TAG, "cannot set system folder");
+ 234:             } else if (note.getInt(NoteColumns.TYPE) == Notes.TYPE_FOLDER) {
+ 235:                 // for folder we can only update the snnipet and type
+ 236:                 String snippet = note.has(NoteColumns.SNIPPET) ? note
+ 237:                         .getString(NoteColumns.SNIPPET) : "";
+ 238:                 if (mIsCreate || !mSnippet.equals(snippet)) {
+ 239:                     mDiffNoteValues.put(NoteColumns.SNIPPET, snippet);
+ 240:                 }
+ 241:                 mSnippet = snippet;
+ 242:
+ 243:                 int type = note.has(NoteColumns.TYPE) ? note.getInt(NoteColumns.TYPE)
+ 244:                         : Notes.TYPE_NOTE;
+ 245:                 if (mIsCreate || mType != type) {
+ 246:                     mDiffNoteValues.put(NoteColumns.TYPE, type);
+ 247:                 }
+ 248:                 mType = type;
+ 249:             } else if (note.getInt(NoteColumns.TYPE) == Notes.TYPE_NOTE) {
+ 250:                 JSONArray dataArray = js.getJSONArray(GTaskStringUtils.META_HEAD_DATA);
+ 251:                 long id = note.has(NoteColumns.ID) ? note.getLong(NoteColumns.ID) : INVALID_ID;
+ 252:                 if (mIsCreate || mId != id) {
+ 253:                     mDiffNoteValues.put(NoteColumns.ID, id);
+ 254:                 }
+ 255:                 mId = id;
+ 256:
+ 257:                 long alertDate = note.has(NoteColumns.ALERTED_DATE) ? note
+ 258:                         .getLong(NoteColumns.ALERTED_DATE) : 0;
+ 259:                 if (mIsCreate || mAlertDate != alertDate) {
+ 260:                     mDiffNoteValues.put(NoteColumns.ALERTED_DATE, alertDate);
+ 261:                 }
+ 262:                 mAlertDate = alertDate;
+ 263:
+ 264:                 int bgColorId = note.has(NoteColumns.BG_COLOR_ID) ? note
+ 265:                         .getInt(NoteColumns.BG_COLOR_ID) : ResourceParser.getDefaultBgId(mContext);
+ 266:                 if (mIsCreate || mBgColorId != bgColorId) {
+ 267:                     mDiffNoteValues.put(NoteColumns.BG_COLOR_ID, bgColorId);
+ 268:                 }
+ 269:                 mBgColorId = bgColorId;
+ 270:
+ 271:                 long createDate = note.has(NoteColumns.CREATED_DATE) ? note
+ 272:                         .getLong(NoteColumns.CREATED_DATE) : System.currentTimeMillis();
+ 273:                 if (mIsCreate || mCreatedDate != createDate) {
+ 274:                     mDiffNoteValues.put(NoteColumns.CREATED_DATE, createDate);
+ 275:                 }
+ 276:                 mCreatedDate = createDate;
+ 277:
+ 278:                 int hasAttachment = note.has(NoteColumns.HAS_ATTACHMENT) ? note
+ 279:                         .getInt(NoteColumns.HAS_ATTACHMENT) : 0;
+ 280:                 if (mIsCreate || mHasAttachment != hasAttachment) {
+ 281:                     mDiffNoteValues.put(NoteColumns.HAS_ATTACHMENT, hasAttachment);
+ 282:                 }
+ 283:                 mHasAttachment = hasAttachment;
+ 284:
+ 285:                 long modifiedDate = note.has(NoteColumns.MODIFIED_DATE) ? note
+ 286:                         .getLong(NoteColumns.MODIFIED_DATE) : System.currentTimeMillis();
+ 287:                 if (mIsCreate || mModifiedDate != modifiedDate) {
+ 288:                     mDiffNoteValues.put(NoteColumns.MODIFIED_DATE, modifiedDate);
+ 289:                 }
+ 290:                 mModifiedDate = modifiedDate;
+ 291:
+ 292:                 long parentId = note.has(NoteColumns.PARENT_ID) ? note
+ 293:                         .getLong(NoteColumns.PARENT_ID) : 0;
+ 294:                 if (mIsCreate || mParentId != parentId) {
+ 295:                     mDiffNoteValues.put(NoteColumns.PARENT_ID, parentId);
+ 296:                 }
+ 297:                 mParentId = parentId;
+ 298:
+ 299:                 String snippet = note.has(NoteColumns.SNIPPET) ? note
+ 300:                         .getString(NoteColumns.SNIPPET) : "";
+ 301:                 if (mIsCreate || !mSnippet.equals(snippet)) {
+ 302:                     mDiffNoteValues.put(NoteColumns.SNIPPET, snippet);
+ 303:                 }
+ 304:                 mSnippet = snippet;
+ 305:
+ 306:                 int type = note.has(NoteColumns.TYPE) ? note.getInt(NoteColumns.TYPE)
+ 307:                         : Notes.TYPE_NOTE;
+ 308:                 if (mIsCreate || mType != type) {
+ 309:                     mDiffNoteValues.put(NoteColumns.TYPE, type);
+ 310:                 }
+ 311:                 mType = type;
+ 312:
+ 313:                 int widgetId = note.has(NoteColumns.WIDGET_ID) ? note.getInt(NoteColumns.WIDGET_ID)
+ 314:                         : AppWidgetManager.INVALID_APPWIDGET_ID;
+ 315:                 if (mIsCreate || mWidgetId != widgetId) {
+ 316:                     mDiffNoteValues.put(NoteColumns.WIDGET_ID, widgetId);
+ 317:                 }
+ 318:                 mWidgetId = widgetId;
+ 319:
+ 320:                 int widgetType = note.has(NoteColumns.WIDGET_TYPE) ? note
+ 321:                         .getInt(NoteColumns.WIDGET_TYPE) : Notes.TYPE_WIDGET_INVALIDE;
+ 322:                 if (mIsCreate || mWidgetType != widgetType) {
+ 323:                     mDiffNoteValues.put(NoteColumns.WIDGET_TYPE, widgetType);
+ 324:                 }
+ 325:                 mWidgetType = widgetType;
+ 326:
+ 327:                 long originParent = note.has(NoteColumns.ORIGIN_PARENT_ID) ? note
+ 328:                         .getLong(NoteColumns.ORIGIN_PARENT_ID) : 0;
+ 329:                 if (mIsCreate || mOriginParent != originParent) {
+ 330:                     mDiffNoteValues.put(NoteColumns.ORIGIN_PARENT_ID, originParent);
+ 331:                 }
+ 332:                 mOriginParent = originParent;
+ 333:
+ 334:                 for (int i = 0; i < dataArray.length(); i++) {
+ 335:                     JSONObject data = dataArray.getJSONObject(i);
+ 336:                     SqlData sqlData = null;
+ 337:                     if (data.has(DataColumns.ID)) {
+ 338:                         long dataId = data.getLong(DataColumns.ID);
+ 339:                         for (SqlData temp : mDataList) {
+ 340:                             if (dataId == temp.getId()) {
+ 341:                                 sqlData = temp;
+ 342:                             }
+ 343:                         }
+ 344:                     }
+ 345:
+ 346:                     if (sqlData == null) {
+ 347:                         sqlData = new SqlData(mContext);
+ 348:                         mDataList.add(sqlData);
+ 349:                     }
+ 350:
+ 351:                     sqlData.setContent(data);
+ 352:                 }
+ 353:             }
+ 354:         } catch (JSONException e) {
+ 355:             Log.e(TAG, e.toString());
+ 356:             e.printStackTrace();
+ 357:             return false;
+ 358:         }
+ 359:         return true;
+ 360:     }

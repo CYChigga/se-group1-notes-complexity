@@ -1,0 +1,63 @@
+ 221:         public int exportToText() {
+ 222:             if (!externalStorageAvailable()) {
+ 223:                 Log.d(TAG, "Media was not mounted");
+ 224:                 return STATE_SD_CARD_UNMOUONTED;
+ 225:             }
+ 226:
+ 227:             PrintStream ps = getExportToTextPrintStream();
+ 228:             if (ps == null) {
+ 229:                 Log.e(TAG, "get print stream error");
+ 230:                 return STATE_SYSTEM_ERROR;
+ 231:             }
+ 232:             // First export folder and its notes
+ 233:             Cursor folderCursor = mContext.getContentResolver().query(
+ 234:                     Notes.CONTENT_NOTE_URI,
+ 235:                     NOTE_PROJECTION,
+ 236:                     "(" + NoteColumns.TYPE + "=" + Notes.TYPE_FOLDER + " AND "
+ 237:                             + NoteColumns.PARENT_ID + "<>" + Notes.ID_TRASH_FOLER + ") OR "
+ 238:                             + NoteColumns.ID + "=" + Notes.ID_CALL_RECORD_FOLDER, null, null);
+ 239:
+ 240:             if (folderCursor != null) {
+ 241:                 if (folderCursor.moveToFirst()) {
+ 242:                     do {
+ 243:                         // Print folder's name
+ 244:                         String folderName = "";
+ 245:                         if(folderCursor.getLong(NOTE_COLUMN_ID) == Notes.ID_CALL_RECORD_FOLDER) {
+ 246:                             folderName = mContext.getString(R.string.call_record_folder_name);
+ 247:                         } else {
+ 248:                             folderName = folderCursor.getString(NOTE_COLUMN_SNIPPET);
+ 249:                         }
+ 250:                         if (!TextUtils.isEmpty(folderName)) {
+ 251:                             ps.println(String.format(getFormat(FORMAT_FOLDER_NAME), folderName));
+ 252:                         }
+ 253:                         String folderId = folderCursor.getString(NOTE_COLUMN_ID);
+ 254:                         exportFolderToText(folderId, ps);
+ 255:                     } while (folderCursor.moveToNext());
+ 256:                 }
+ 257:                 folderCursor.close();
+ 258:             }
+ 259:
+ 260:             // Export notes in root's folder
+ 261:             Cursor noteCursor = mContext.getContentResolver().query(
+ 262:                     Notes.CONTENT_NOTE_URI,
+ 263:                     NOTE_PROJECTION,
+ 264:                     NoteColumns.TYPE + "=" + +Notes.TYPE_NOTE + " AND " + NoteColumns.PARENT_ID
+ 265:                             + "=0", null, null);
+ 266:
+ 267:             if (noteCursor != null) {
+ 268:                 if (noteCursor.moveToFirst()) {
+ 269:                     do {
+ 270:                         ps.println(String.format(getFormat(FORMAT_NOTE_DATE), DateFormat.format(
+ 271:                                 mContext.getString(R.string.format_datetime_mdhm),
+ 272:                                 noteCursor.getLong(NOTE_COLUMN_MODIFIED_DATE))));
+ 273:                         // Query data belong to this note
+ 274:                         String noteId = noteCursor.getString(NOTE_COLUMN_ID);
+ 275:                         exportNoteToText(noteId, ps);
+ 276:                     } while (noteCursor.moveToNext());
+ 277:                 }
+ 278:                 noteCursor.close();
+ 279:             }
+ 280:             ps.close();
+ 281:
+ 282:             return STATE_SUCCESS;
+ 283:         }

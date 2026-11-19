@@ -1,0 +1,19 @@
+{
+  "baseline": "b94cc3908dbdc5784972478431f16c7d6904905a",
+  "java_files": 39,
+  "changed_files": {
+    "model/Note.java": 49,
+    "model/WorkingNote.java": 73,
+    "tool/BackupUtils.java": 46,
+    "tool/DataUtils.java": 44,
+    "tool/GTaskStringUtils.java": 49,
+    "tool/ResourceParser.java": 37
+  },
+  "added_chinese_comment_lines": 298,
+  "java_tokens_equal": true,
+  "method_metrics_equal": true,
+  "methods_with_body": 448,
+  "constructors": 38,
+  "mean_method_sloc": 12.792410714285714,
+  "android_compile_and_runtime": "未执行"
+}

@@ -36,12 +36,18 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 
+// 文本导出工具，串联存储状态检查数据库查询和文件输出
+// 状态常量含有恢复相关命名，但本类公开实现主要是文本导出
+// 日期命名使同日文件可能重用，应提醒调用方覆盖风险
 public class BackupUtils {
     private static final String TAG = "BackupUtils";
     // Singleton stuff
     private static BackupUtils sInstance;
 
+    // 以同步静态方法延迟初始化导出工具单例
+    // 首次传入的上下文被持有，后续调用不会替换
     public static synchronized BackupUtils getInstance(Context context) {
+        // 单例只创建一次，避免重复构造导出执行器
         if (sInstance == null) {
             sInstance = new BackupUtils(context);
         }
@@ -65,22 +71,34 @@ public class BackupUtils {
 
     private TextExport mTextExport;
 
+    // 把上下文交给文本导出执行器
+    // 当前外层只提供文本导出入口，没有实现完整备份恢复闭环
     private BackupUtils(Context context) {
         mTextExport = new TextExport(context);
     }
 
+    // 判断外部存储是否处于可读写挂载状态
+    // 只读挂载也不会通过该条件
     private static boolean externalStorageAvailable() {
         return Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState());
     }
 
+    // 外层入口委托给TextExport，内层执行实际导出
+    // 内层先检查挂载状态和输出流，再按文件夹与根便签遍历
+    // 导出正文和通话附属信息后关闭流，并返回状态码
+    // 不能仅凭最终成功码证明所有底层PrintStream写入均无错
     public int exportToText() {
         return mTextExport.exportToText();
     }
 
+    // 返回导出器缓存的最近输出文件名
+    // 在成功创建文件流之前可能为空字符串
     public String getExportedTextFileName() {
         return mTextExport.mFileName;
     }
 
+    // 返回导出器记录的目录配置字符串
+    // 其值来自资源配置，不等同于拼接后的绝对路径
     public String getExportedTextFileDir() {
         return mTextExport.mFileDirectory;
     }
@@ -125,6 +143,8 @@ public class BackupUtils {
         private String mFileName;
         private String mFileDirectory;
 
+        // 读取文件夹日期正文三类导出格式模板
+        // 将文件名与目录缓存置空，后续创建输出流时填写
         public TextExport(Context context) {
             TEXT_FORMAT = context.getResources().getStringArray(R.array.format_for_exported_note);
             mContext = context;
@@ -132,6 +152,8 @@ public class BackupUtils {
             mFileDirectory = "";
         }
 
+        // 按内部格式下标读取本地化模板
+        // 调用方须保证资源数组长度和约定下标一致
         private String getFormat(int id) {
             return TEXT_FORMAT[id];
         }
@@ -139,6 +161,9 @@ public class BackupUtils {
         /**
          * Export the folder identified by folder id to text
          */
+        // 按父文件夹编号查询便签并依次导出
+        // 先打印修改日期，再委托导出每条便签数据
+        // 游标在正常路径关闭，异常路径未使用finally保护
         private void exportFolderToText(String folderId, PrintStream ps) {
             // Query notes belong to this folder
             Cursor notesCursor = mContext.getContentResolver().query(Notes.CONTENT_NOTE_URI,
@@ -165,6 +190,10 @@ public class BackupUtils {
         /**
          * Export note identified by id to a print stream
          */
+        // 按便签编号遍历数据行，分别导出正文和通话信息
+        // 电话号码及附件位置为空时跳过，通话日期仍按模板输出
+        // 尾部写入固定字节作为分隔符，需另核对它是否符合目标文本格式
+        // 游标释放依赖正常遍历结束，运行时异常可能影响释放
         private void exportNoteToText(String noteId, PrintStream ps) {
             Cursor dataCursor = mContext.getContentResolver().query(Notes.CONTENT_DATA_URI,
                     DATA_PROJECTION, DataColumns.NOTE_ID + "=?", new String[] {
@@ -218,12 +247,18 @@ public class BackupUtils {
         /**
          * Note will be exported as text which is user readable
          */
+        // 外层入口委托给TextExport，内层执行实际导出
+        // 内层先检查挂载状态和输出流，再按文件夹与根便签遍历
+        // 导出正文和通话附属信息后关闭流，并返回状态码
+        // 不能仅凭最终成功码证明所有底层PrintStream写入均无错
         public int exportToText() {
+            // 没有可写挂载介质时提前返回，不创建任何导出流
             if (!externalStorageAvailable()) {
                 Log.d(TAG, "Media was not mounted");
                 return STATE_SD_CARD_UNMOUONTED;
             }
 
+            // 输出流创建失败需要转为系统错误状态，不能继续查询导出
             PrintStream ps = getExportToTextPrintStream();
             if (ps == null) {
                 Log.e(TAG, "get print stream error");
@@ -242,6 +277,7 @@ public class BackupUtils {
                     do {
                         // Print folder's name
                         String folderName = "";
+                        // 通话文件夹使用本地化名称，普通文件夹使用数据库摘要
                         if(folderCursor.getLong(NOTE_COLUMN_ID) == Notes.ID_CALL_RECORD_FOLDER) {
                             folderName = mContext.getString(R.string.call_record_folder_name);
                         } else {
@@ -251,6 +287,7 @@ public class BackupUtils {
                             ps.println(String.format(getFormat(FORMAT_FOLDER_NAME), folderName));
                         }
                         String folderId = folderCursor.getString(NOTE_COLUMN_ID);
+                        // 当前文件夹下的日期与正文由下一层逐条查询输出
                         exportFolderToText(folderId, ps);
                     } while (folderCursor.moveToNext());
                 }
@@ -277,6 +314,7 @@ public class BackupUtils {
                 }
                 noteCursor.close();
             }
+            // 正常尾部释放文件流；中途异常不一定经过这里
             ps.close();
 
             return STATE_SUCCESS;
@@ -285,6 +323,9 @@ public class BackupUtils {
         /**
          * Get a print stream pointed to the file {@generateExportedTextFile}
          */
+        // 先生成外部存储目标文件并缓存文件名与目录
+        // 打开文件输出流后包为PrintStream，异常返回空
+        // 创建流失败时可能已留下文件，调用方不能仅凭文件存在判断成功
         private PrintStream getExportToTextPrintStream() {
             File file = generateFileMountedOnSDcard(mContext, R.string.file_path,
                     R.string.file_name_txt_format);
@@ -312,6 +353,9 @@ public class BackupUtils {
     /**
      * Generate the text file to store imported data
      */
+    // 组合外部存储根目录资源路径和当前日期文件名
+    // 仅调用mkdir创建单级目录，未检查创建动作返回值
+    // 文件已存在时直接复用，上层非追加输出流会覆盖同名内容
     private static File generateFileMountedOnSDcard(Context context, int filePathResId, int fileNameFormatResId) {
         StringBuilder sb = new StringBuilder();
         sb.append(Environment.getExternalStorageDirectory());
@@ -325,9 +369,11 @@ public class BackupUtils {
 
         try {
             if (!filedir.exists()) {
+                // 返回值没有被检查，失败原因要在后续文件创建或打开时才能体现
                 filedir.mkdir();
             }
             if (!file.exists()) {
+                // 已有同名日期文件不会重建，但后续FileOutputStream仍可能覆盖内容
                 file.createNewFile();
             }
             return file;

@@ -1,0 +1,12 @@
+test_anonymous_and_named_inner_class (__main__.MeasurementTests.test_anonymous_and_named_inner_class) ... ok
+test_comments_literals_and_braces (__main__.MeasurementTests.test_comments_literals_and_braces) ... ok
+test_comments_preserve_semantics (__main__.MeasurementTests.test_comments_preserve_semantics) ... ok
+test_interface_excluded_and_empty_body_included (__main__.MeasurementTests.test_interface_excluded_and_empty_body_included) ... ok
+test_multiline_declaration (__main__.MeasurementTests.test_multiline_declaration) ... ok
+test_operators_do_not_read_string_content (__main__.MeasurementTests.test_operators_do_not_read_string_content) ... ok
+test_overloads_and_constructors (__main__.MeasurementTests.test_overloads_and_constructors) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.001s
+
+OK

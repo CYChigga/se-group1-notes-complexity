@@ -1,0 +1,124 @@
+ 354:     private void syncFolder() throws NetworkFailureException {
+ 355:         Cursor c = null;
+ 356:         String gid;
+ 357:         Node node;
+ 358:         int syncType;
+ 359:
+ 360:         if (mCancelled) {
+ 361:             return;
+ 362:         }
+ 363:
+ 364:         // for root folder
+ 365:         try {
+ 366:             c = mContentResolver.query(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI,
+ 367:                     Notes.ID_ROOT_FOLDER), SqlNote.PROJECTION_NOTE, null, null, null);
+ 368:             if (c != null) {
+ 369:                 c.moveToNext();
+ 370:                 gid = c.getString(SqlNote.GTASK_ID_COLUMN);
+ 371:                 node = mGTaskHashMap.get(gid);
+ 372:                 if (node != null) {
+ 373:                     mGTaskHashMap.remove(gid);
+ 374:                     mGidToNid.put(gid, (long) Notes.ID_ROOT_FOLDER);
+ 375:                     mNidToGid.put((long) Notes.ID_ROOT_FOLDER, gid);
+ 376:                     // for system folder, only update remote name if necessary
+ 377:                     if (!node.getName().equals(
+ 378:                             GTaskStringUtils.MIUI_FOLDER_PREFFIX + GTaskStringUtils.FOLDER_DEFAULT))
+ 379:                         doContentSync(Node.SYNC_ACTION_UPDATE_REMOTE, node, c);
+ 380:                 } else {
+ 381:                     doContentSync(Node.SYNC_ACTION_ADD_REMOTE, node, c);
+ 382:                 }
+ 383:             } else {
+ 384:                 Log.w(TAG, "failed to query root folder");
+ 385:             }
+ 386:         } finally {
+ 387:             if (c != null) {
+ 388:                 c.close();
+ 389:                 c = null;
+ 390:             }
+ 391:         }
+ 392:
+ 393:         // for call-note folder
+ 394:         try {
+ 395:             c = mContentResolver.query(Notes.CONTENT_NOTE_URI, SqlNote.PROJECTION_NOTE, "(_id=?)",
+ 396:                     new String[] {
+ 397:                         String.valueOf(Notes.ID_CALL_RECORD_FOLDER)
+ 398:                     }, null);
+ 399:             if (c != null) {
+ 400:                 if (c.moveToNext()) {
+ 401:                     gid = c.getString(SqlNote.GTASK_ID_COLUMN);
+ 402:                     node = mGTaskHashMap.get(gid);
+ 403:                     if (node != null) {
+ 404:                         mGTaskHashMap.remove(gid);
+ 405:                         mGidToNid.put(gid, (long) Notes.ID_CALL_RECORD_FOLDER);
+ 406:                         mNidToGid.put((long) Notes.ID_CALL_RECORD_FOLDER, gid);
+ 407:                         // for system folder, only update remote name if
+ 408:                         // necessary
+ 409:                         if (!node.getName().equals(
+ 410:                                 GTaskStringUtils.MIUI_FOLDER_PREFFIX
+ 411:                                         + GTaskStringUtils.FOLDER_CALL_NOTE))
+ 412:                             doContentSync(Node.SYNC_ACTION_UPDATE_REMOTE, node, c);
+ 413:                     } else {
+ 414:                         doContentSync(Node.SYNC_ACTION_ADD_REMOTE, node, c);
+ 415:                     }
+ 416:                 }
+ 417:             } else {
+ 418:                 Log.w(TAG, "failed to query call note folder");
+ 419:             }
+ 420:         } finally {
+ 421:             if (c != null) {
+ 422:                 c.close();
+ 423:                 c = null;
+ 424:             }
+ 425:         }
+ 426:
+ 427:         // for local existing folders
+ 428:         try {
+ 429:             c = mContentResolver.query(Notes.CONTENT_NOTE_URI, SqlNote.PROJECTION_NOTE,
+ 430:                     "(type=? AND parent_id<>?)", new String[] {
+ 431:                             String.valueOf(Notes.TYPE_FOLDER), String.valueOf(Notes.ID_TRASH_FOLER)
+ 432:                     }, NoteColumns.TYPE + " DESC");
+ 433:             if (c != null) {
+ 434:                 while (c.moveToNext()) {
+ 435:                     gid = c.getString(SqlNote.GTASK_ID_COLUMN);
+ 436:                     node = mGTaskHashMap.get(gid);
+ 437:                     if (node != null) {
+ 438:                         mGTaskHashMap.remove(gid);
+ 439:                         mGidToNid.put(gid, c.getLong(SqlNote.ID_COLUMN));
+ 440:                         mNidToGid.put(c.getLong(SqlNote.ID_COLUMN), gid);
+ 441:                         syncType = node.getSyncAction(c);
+ 442:                     } else {
+ 443:                         if (c.getString(SqlNote.GTASK_ID_COLUMN).trim().length() == 0) {
+ 444:                             // local add
+ 445:                             syncType = Node.SYNC_ACTION_ADD_REMOTE;
+ 446:                         } else {
+ 447:                             // remote delete
+ 448:                             syncType = Node.SYNC_ACTION_DEL_LOCAL;
+ 449:                         }
+ 450:                     }
+ 451:                     doContentSync(syncType, node, c);
+ 452:                 }
+ 453:             } else {
+ 454:                 Log.w(TAG, "failed to query existing folder");
+ 455:             }
+ 456:         } finally {
+ 457:             if (c != null) {
+ 458:                 c.close();
+ 459:                 c = null;
+ 460:             }
+ 461:         }
+ 462:
+ 463:         // for remote add folders
+ 464:         Iterator<Map.Entry<String, TaskList>> iter = mGTaskListHashMap.entrySet().iterator();
+ 465:         while (iter.hasNext()) {
+ 466:             Map.Entry<String, TaskList> entry = iter.next();
+ 467:             gid = entry.getKey();
+ 468:             node = entry.getValue();
+ 469:             if (mGTaskHashMap.containsKey(gid)) {
+ 470:                 mGTaskHashMap.remove(gid);
+ 471:                 doContentSync(Node.SYNC_ACTION_ADD_LOCAL, node, null);
+ 472:             }
+ 473:         }
+ 474:
+ 475:         if (!mCancelled)
+ 476:             GTaskClient.getInstance().commitUpdate();
+ 477:     }

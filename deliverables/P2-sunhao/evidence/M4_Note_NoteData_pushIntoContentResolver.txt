@@ -1,0 +1,71 @@
+ 181:         Uri pushIntoContentResolver(Context context, long noteId) {
+ 182:             /**
+ 183:              * Check for safety
+ 184:              */
+ 185:             if (noteId <= 0) {
+ 186:                 throw new IllegalArgumentException("Wrong note id:" + noteId);
+ 187:             }
+ 188:
+ 189:             ArrayList<ContentProviderOperation> operationList = new ArrayList<ContentProviderOperation>();
+ 190:             ContentProviderOperation.Builder builder = null;
+ 191:
+ 192:             if(mTextDataValues.size() > 0) {
+ 193:                 mTextDataValues.put(DataColumns.NOTE_ID, noteId);
+ 194:                 if (mTextDataId == 0) {
+ 195:                     mTextDataValues.put(DataColumns.MIME_TYPE, TextNote.CONTENT_ITEM_TYPE);
+ 196:                     Uri uri = context.getContentResolver().insert(Notes.CONTENT_DATA_URI,
+ 197:                             mTextDataValues);
+ 198:                     try {
+ 199:                         setTextDataId(Long.valueOf(uri.getPathSegments().get(1)));
+ 200:                     } catch (NumberFormatException e) {
+ 201:                         Log.e(TAG, "Insert new text data fail with noteId" + noteId);
+ 202:                         mTextDataValues.clear();
+ 203:                         return null;
+ 204:                     }
+ 205:                 } else {
+ 206:                     builder = ContentProviderOperation.newUpdate(ContentUris.withAppendedId(
+ 207:                             Notes.CONTENT_DATA_URI, mTextDataId));
+ 208:                     builder.withValues(mTextDataValues);
+ 209:                     operationList.add(builder.build());
+ 210:                 }
+ 211:                 mTextDataValues.clear();
+ 212:             }
+ 213:
+ 214:             if(mCallDataValues.size() > 0) {
+ 215:                 mCallDataValues.put(DataColumns.NOTE_ID, noteId);
+ 216:                 if (mCallDataId == 0) {
+ 217:                     mCallDataValues.put(DataColumns.MIME_TYPE, CallNote.CONTENT_ITEM_TYPE);
+ 218:                     Uri uri = context.getContentResolver().insert(Notes.CONTENT_DATA_URI,
+ 219:                             mCallDataValues);
+ 220:                     try {
+ 221:                         setCallDataId(Long.valueOf(uri.getPathSegments().get(1)));
+ 222:                     } catch (NumberFormatException e) {
+ 223:                         Log.e(TAG, "Insert new call data fail with noteId" + noteId);
+ 224:                         mCallDataValues.clear();
+ 225:                         return null;
+ 226:                     }
+ 227:                 } else {
+ 228:                     builder = ContentProviderOperation.newUpdate(ContentUris.withAppendedId(
+ 229:                             Notes.CONTENT_DATA_URI, mCallDataId));
+ 230:                     builder.withValues(mCallDataValues);
+ 231:                     operationList.add(builder.build());
+ 232:                 }
+ 233:                 mCallDataValues.clear();
+ 234:             }
+ 235:
+ 236:             if (operationList.size() > 0) {
+ 237:                 try {
+ 238:                     ContentProviderResult[] results = context.getContentResolver().applyBatch(
+ 239:                             Notes.AUTHORITY, operationList);
+ 240:                     return (results == null || results.length == 0 || results[0] == null) ? null
+ 241:                             : ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, noteId);
+ 242:                 } catch (RemoteException e) {
+ 243:                     Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+ 244:                     return null;
+ 245:                 } catch (OperationApplicationException e) {
+ 246:                     Log.e(TAG, String.format("%s: %s", e.toString(), e.getMessage()));
+ 247:                     return null;
+ 248:                 }
+ 249:             }
+ 250:             return null;
+ 251:         }

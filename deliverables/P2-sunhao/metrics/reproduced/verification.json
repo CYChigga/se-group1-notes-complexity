@@ -1,0 +1,8 @@
+{
+  "changed_java_files": 6,
+  "token_equivalent": true,
+  "method_metrics_equal": true,
+  "java_parse": "39个文件均通过Java 7语法解析",
+  "android_runtime": "未编译、未运行Android应用",
+  "human_review": "孙浩人工审定完成（依据用户确认）；王一帆交叉复核待完成"
+}

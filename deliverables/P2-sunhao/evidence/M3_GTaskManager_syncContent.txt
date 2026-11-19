@@ -1,0 +1,103 @@
+ 250:     private void syncContent() throws NetworkFailureException {
+ 251:         int syncType;
+ 252:         Cursor c = null;
+ 253:         String gid;
+ 254:         Node node;
+ 255:
+ 256:         mLocalDeleteIdMap.clear();
+ 257:
+ 258:         if (mCancelled) {
+ 259:             return;
+ 260:         }
+ 261:
+ 262:         // for local deleted note
+ 263:         try {
+ 264:             c = mContentResolver.query(Notes.CONTENT_NOTE_URI, SqlNote.PROJECTION_NOTE,
+ 265:                     "(type<>? AND parent_id=?)", new String[] {
+ 266:                             String.valueOf(Notes.TYPE_SYSTEM), String.valueOf(Notes.ID_TRASH_FOLER)
+ 267:                     }, null);
+ 268:             if (c != null) {
+ 269:                 while (c.moveToNext()) {
+ 270:                     gid = c.getString(SqlNote.GTASK_ID_COLUMN);
+ 271:                     node = mGTaskHashMap.get(gid);
+ 272:                     if (node != null) {
+ 273:                         mGTaskHashMap.remove(gid);
+ 274:                         doContentSync(Node.SYNC_ACTION_DEL_REMOTE, node, c);
+ 275:                     }
+ 276:
+ 277:                     mLocalDeleteIdMap.add(c.getLong(SqlNote.ID_COLUMN));
+ 278:                 }
+ 279:             } else {
+ 280:                 Log.w(TAG, "failed to query trash folder");
+ 281:             }
+ 282:         } finally {
+ 283:             if (c != null) {
+ 284:                 c.close();
+ 285:                 c = null;
+ 286:             }
+ 287:         }
+ 288:
+ 289:         // sync folder first
+ 290:         syncFolder();
+ 291:
+ 292:         // for note existing in database
+ 293:         try {
+ 294:             c = mContentResolver.query(Notes.CONTENT_NOTE_URI, SqlNote.PROJECTION_NOTE,
+ 295:                     "(type=? AND parent_id<>?)", new String[] {
+ 296:                             String.valueOf(Notes.TYPE_NOTE), String.valueOf(Notes.ID_TRASH_FOLER)
+ 297:                     }, NoteColumns.TYPE + " DESC");
+ 298:             if (c != null) {
+ 299:                 while (c.moveToNext()) {
+ 300:                     gid = c.getString(SqlNote.GTASK_ID_COLUMN);
+ 301:                     node = mGTaskHashMap.get(gid);
+ 302:                     if (node != null) {
+ 303:                         mGTaskHashMap.remove(gid);
+ 304:                         mGidToNid.put(gid, c.getLong(SqlNote.ID_COLUMN));
+ 305:                         mNidToGid.put(c.getLong(SqlNote.ID_COLUMN), gid);
+ 306:                         syncType = node.getSyncAction(c);
+ 307:                     } else {
+ 308:                         if (c.getString(SqlNote.GTASK_ID_COLUMN).trim().length() == 0) {
+ 309:                             // local add
+ 310:                             syncType = Node.SYNC_ACTION_ADD_REMOTE;
+ 311:                         } else {
+ 312:                             // remote delete
+ 313:                             syncType = Node.SYNC_ACTION_DEL_LOCAL;
+ 314:                         }
+ 315:                     }
+ 316:                     doContentSync(syncType, node, c);
+ 317:                 }
+ 318:             } else {
+ 319:                 Log.w(TAG, "failed to query existing note in database");
+ 320:             }
+ 321:
+ 322:         } finally {
+ 323:             if (c != null) {
+ 324:                 c.close();
+ 325:                 c = null;
+ 326:             }
+ 327:         }
+ 328:
+ 329:         // go through remaining items
+ 330:         Iterator<Map.Entry<String, Node>> iter = mGTaskHashMap.entrySet().iterator();
+ 331:         while (iter.hasNext()) {
+ 332:             Map.Entry<String, Node> entry = iter.next();
+ 333:             node = entry.getValue();
+ 334:             doContentSync(Node.SYNC_ACTION_ADD_LOCAL, node, null);
+ 335:         }
+ 336:
+ 337:         // mCancelled can be set by another thread, so we neet to check one by
+ 338:         // one
+ 339:         // clear local delete table
+ 340:         if (!mCancelled) {
+ 341:             if (!DataUtils.batchDeleteNotes(mContentResolver, mLocalDeleteIdMap)) {
+ 342:                 throw new ActionFailureException("failed to batch-delete local deleted notes");
+ 343:             }
+ 344:         }
+ 345:
+ 346:         // refresh local sync id
+ 347:         if (!mCancelled) {
+ 348:             GTaskClient.getInstance().commitUpdate();
+ 349:             refreshLocalSyncId();
+ 350:         }
+ 351:
+ 352:     }

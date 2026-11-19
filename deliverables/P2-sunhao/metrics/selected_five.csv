@@ -1,0 +1,6 @@
+﻿id,file,owner,signature,start,end,sloc,physical_lines,operator_kinds,above_mean,dependency_score,obscurity_score,total_score,review_status
+M1,src/net/micode/notes/gtask/data/SqlNote.java,SqlNote,setContent(JSONObject),229,360,116,132,26,True,4,4,8,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M2,src/net/micode/notes/gtask/remote/GTaskManager.java,GTaskManager,syncFolder(),354,477,109,124,27,True,5,4,9,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M3,src/net/micode/notes/gtask/remote/GTaskManager.java,GTaskManager,syncContent(),250,352,82,103,27,True,5,5,10,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M4,src/net/micode/notes/model/Note.java,Note.NoteData,"pushIntoContentResolver(Context,long)",181,251,64,71,26,True,4,5,9,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M5,src/net/micode/notes/tool/BackupUtils.java,BackupUtils.TextExport,exportToText(),221,283,54,63,18,True,4,4,8,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成

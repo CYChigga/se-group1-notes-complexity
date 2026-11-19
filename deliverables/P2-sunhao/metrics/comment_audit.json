@@ -1,0 +1,32 @@
+[
+  {
+    "file": "src/net/micode/notes/model/Note.java",
+    "added_chinese_comment_lines": 49,
+    "token_equivalent": true
+  },
+  {
+    "file": "src/net/micode/notes/model/WorkingNote.java",
+    "added_chinese_comment_lines": 73,
+    "token_equivalent": true
+  },
+  {
+    "file": "src/net/micode/notes/tool/BackupUtils.java",
+    "added_chinese_comment_lines": 46,
+    "token_equivalent": true
+  },
+  {
+    "file": "src/net/micode/notes/tool/DataUtils.java",
+    "added_chinese_comment_lines": 44,
+    "token_equivalent": true
+  },
+  {
+    "file": "src/net/micode/notes/tool/GTaskStringUtils.java",
+    "added_chinese_comment_lines": 49,
+    "token_equivalent": true
+  },
+  {
+    "file": "src/net/micode/notes/tool/ResourceParser.java",
+    "added_chinese_comment_lines": 37,
+    "token_equivalent": true
+  }
+]

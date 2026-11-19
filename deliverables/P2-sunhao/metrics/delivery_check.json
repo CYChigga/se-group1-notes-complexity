@@ -1,0 +1,11 @@
+{
+  "archive_crc": "PASS",
+  "sha256_files": 87,
+  "seven_tests": "PASS",
+  "standalone_reproduction": "PASS",
+  "patch_apply_check": "PASS",
+  "five_methods_above_mean": "PASS",
+  "added_comments": 298,
+  "human_review": "孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成",
+  "human_review_confirmation": "依据用户声明更新，不表示agent实施了人工审定"
+}

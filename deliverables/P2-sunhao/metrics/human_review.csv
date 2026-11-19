@@ -1,0 +1,6 @@
+﻿id,method,agent_D,agent_O,sunhao_D,sunhao_O,wang_D,wang_O,consensus_D,consensus_O,reason,reviewer,date,adopted_or_rejected
+M1,SqlNote.setContent(JSONObject),4,4,,,,,,,整体人工审定完成已确认；独立评分及共识尚未提供,孙浩（依据用户确认登记）,实际审定日期未提供；确认记录2026-11-19,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M2,GTaskManager.syncFolder(),5,4,,,,,,,整体人工审定完成已确认；独立评分及共识尚未提供,孙浩（依据用户确认登记）,实际审定日期未提供；确认记录2026-11-19,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M3,GTaskManager.syncContent(),5,5,,,,,,,整体人工审定完成已确认；独立评分及共识尚未提供,孙浩（依据用户确认登记）,实际审定日期未提供；确认记录2026-11-19,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M4,"Note.NoteData.pushIntoContentResolver(Context,long)",4,5,,,,,,,整体人工审定完成已确认；独立评分及共识尚未提供,孙浩（依据用户确认登记）,实际审定日期未提供；确认记录2026-11-19,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
+M5,BackupUtils.TextExport.exportToText(),4,4,,,,,,,整体人工审定完成已确认；独立评分及共识尚未提供,孙浩（依据用户确认登记）,实际审定日期未提供；确认记录2026-11-19,孙浩本人已完成人工审定（依据用户确认）；王一帆交叉复核待完成
