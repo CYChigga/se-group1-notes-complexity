@@ -29,6 +29,11 @@ import net.micode.notes.ui.NotesListActivity;
 import net.micode.notes.ui.NotesPreferenceActivity;
 
 
+/**
+ * 同步的后台执行者与用户反馈通道：AsyncTask 三段式对应开始提示、过程刷新、结果上报。
+ * 状态码到文案的映射集中在这里——GTaskManager 只返回码，不关心怎么展示。
+ * 取消由外部调 cancelSync 触发，本类仅把请求转发给 GTaskManager 的取消标志。
+ */
 public class GTaskASyncTask extends AsyncTask<Void, String, Integer> {
 
     private static int GTASK_SYNC_NOTIFICATION_ID = 5234235;
@@ -63,6 +68,8 @@ public class GTaskASyncTask extends AsyncTask<Void, String, Integer> {
         });
     }
 
+    // 成功通知点开进列表页；失败与取消点开设置页——那里能重选账户，
+    // 而账户配错正是同步失败最常见的原因。
     private void showNotification(int tickerId, String content) {
         Notification notification = new Notification(R.drawable.notification, mContext
                 .getString(tickerId), System.currentTimeMillis());
@@ -83,6 +90,8 @@ public class GTaskASyncTask extends AsyncTask<Void, String, Integer> {
     }
 
     @Override
+    // 后台线程只做一件事：调 GTaskManager.sync 并返回状态码；
+    // 进度文字经 publishProgess 抛回主线程，不在后台线程直接碰 UI。
     protected Integer doInBackground(Void... unused) {
         publishProgess(mContext.getString(R.string.sync_progress_login, NotesPreferenceActivity
                 .getSyncAccountName(mContext)));
@@ -98,6 +107,9 @@ public class GTaskASyncTask extends AsyncTask<Void, String, Integer> {
     }
 
     @Override
+    // 按状态码分支提示，并回调 onComplete（服务在回调里停掉自己）；
+    // 回调另起线程执行，避免在 UI 线程里做 stopSelf 这类工作。
+    // 注意 4 个分支之外没有 else，未知码不会产生任何提示。
     protected void onPostExecute(Integer result) {
         if (result == GTaskManager.STATE_SUCCESS) {
             showNotification(R.string.ticker_success, mContext.getString(
