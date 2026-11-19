@@ -25,10 +25,13 @@ import android.util.Log;
 
 import java.util.HashMap;
 
+// 联系人辅助类：根据电话号码反查联系人姓名，带内存缓存
 public class Contact {
+    // 缓存表，key 是电话号码，value 是对应的联系人姓名
     private static HashMap<String, String> sContactCache;
     private static final String TAG = "Contact";
 
+    // 查询联系人的条件 SQL：用号码匹配、限定是手机号类型、且精确匹配（min_match = '+'）
     private static final String CALLER_ID_SELECTION = "PHONE_NUMBERS_EQUAL(" + Phone.NUMBER
     + ",?) AND " + Data.MIMETYPE + "='" + Phone.CONTENT_ITEM_TYPE + "'"
     + " AND " + Data.RAW_CONTACT_ID + " IN "
@@ -37,14 +40,17 @@ public class Contact {
             + " WHERE min_match = '+')";
 
     public static String getContact(Context context, String phoneNumber) {
+        // 第一次调用时初始化缓存表
         if(sContactCache == null) {
             sContactCache = new HashMap<String, String>();
         }
 
+        // 命中缓存直接返回，避免重复查询通讯录
         if(sContactCache.containsKey(phoneNumber)) {
             return sContactCache.get(phoneNumber);
         }
 
+        // 把 SQL 里的 "+" 替换成系统算出的最小匹配长度，提高匹配精度
         String selection = CALLER_ID_SELECTION.replace("+",
                 PhoneNumberUtils.toCallerIDMinMatch(phoneNumber));
         Cursor cursor = context.getContentResolver().query(
@@ -56,6 +62,7 @@ public class Contact {
 
         if (cursor != null && cursor.moveToFirst()) {
             try {
+                // 取第一行第一列就是联系人姓名，写进缓存并返回
                 String name = cursor.getString(0);
                 sContactCache.put(phoneNumber, name);
                 return name;
@@ -63,9 +70,11 @@ public class Contact {
                 Log.e(TAG, " Cursor get string error " + e.toString());
                 return null;
             } finally {
+                // 无论成功失败都要关闭游标，释放资源
                 cursor.close();
             }
         } else {
+            // 没匹配到任何联系人
             Log.d(TAG, "No contact matched with number:" + phoneNumber);
             return null;
         }
