@@ -20,7 +20,15 @@ import android.database.Cursor;
 
 import org.json.JSONObject;
 
+/**
+ * 同步节点的抽象基类：Task（便签）与 TaskList（目录）共用的远端实体身份。
+ * 持有远端 gid、名称、远端最后修改时间与删除标记，并强制子类回答三个问题：
+ * 如何生成 create/update 报文、如何与本地 JSON 互转、本次同步该采取什么动作。
+ * 判定采用“时间戳比对”而非逐字段比对，一次 long 比较即可确认远端是否变化。
+ */
 public abstract class Node {
+    // 一次同步对同一节点只允许一个动作；取值不连续，便于日志里一眼区分方向
+    // （ADD / DEL / UPDATE 三组，各组再分 LOCAL / REMOTE，7 为双向冲突，8 为错误）。
     public static final int SYNC_ACTION_NONE = 0;
 
     public static final int SYNC_ACTION_ADD_REMOTE = 1;
