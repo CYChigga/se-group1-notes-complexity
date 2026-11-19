@@ -74,6 +74,16 @@ import java.util.regex.Pattern;
 
 public class NoteEditActivity extends Activity implements OnClickListener,
         NoteSettingChangedListener, OnTextViewChangeListener {
+    /**
+     * 编辑界面的核心协调者。
+     *
+     * Activity 本身不直接操作数据库，而是把界面状态写入 WorkingNote，
+     * 再由 WorkingNote 和 Note 将差异提交给 ContentProvider。这样可以把
+     * Android 生命周期、界面交互与持久化细节分开，避免每次按键都访问数据库。
+     *
+     * 本类同时实现设置变更和清单文本回调，因此背景色、提醒、Widget、
+     * 清单行增删等事件最终都会回到这里统一更新界面或触发保存。
+     */
     private class HeadViewHolder {
         public TextView tvModified;
 
@@ -86,6 +96,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private static final Map<Integer, Integer> sBgSelectorBtnsMap = new HashMap<Integer, Integer>();
     static {
+        // 将界面按钮 id 映射为业务使用的颜色编号，点击处理时无需编写重复分支。
         sBgSelectorBtnsMap.put(R.id.iv_bg_yellow, ResourceParser.YELLOW);
         sBgSelectorBtnsMap.put(R.id.iv_bg_red, ResourceParser.RED);
         sBgSelectorBtnsMap.put(R.id.iv_bg_blue, ResourceParser.BLUE);
@@ -95,6 +106,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private static final Map<Integer, Integer> sBgSelectorSelectionMap = new HashMap<Integer, Integer>();
     static {
+        // 反向记录每种颜色对应的选中标记，用于初始化和切换时保持唯一选中状态。
         sBgSelectorSelectionMap.put(ResourceParser.YELLOW, R.id.iv_bg_yellow_select);
         sBgSelectorSelectionMap.put(ResourceParser.RED, R.id.iv_bg_red_select);
         sBgSelectorSelectionMap.put(ResourceParser.BLUE, R.id.iv_bg_blue_select);
@@ -104,6 +116,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private static final Map<Integer, Integer> sFontSizeBtnsMap = new HashMap<Integer, Integer>();
     static {
+        // 字号选择控件只保存稳定的字号编号，不把具体 TextAppearance 分散到点击逻辑中。
         sFontSizeBtnsMap.put(R.id.ll_font_large, ResourceParser.TEXT_LARGE);
         sFontSizeBtnsMap.put(R.id.ll_font_small, ResourceParser.TEXT_SMALL);
         sFontSizeBtnsMap.put(R.id.ll_font_normal, ResourceParser.TEXT_MEDIUM);
@@ -112,6 +125,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private static final Map<Integer, Integer> sFontSelectorSelectionMap = new HashMap<Integer, Integer>();
     static {
+        // 字号编号与选中图标一一对应，显示选择面板时可直接恢复当前状态。
         sFontSelectorSelectionMap.put(ResourceParser.TEXT_LARGE, R.id.iv_large_select);
         sFontSelectorSelectionMap.put(ResourceParser.TEXT_SMALL, R.id.iv_small_select);
         sFontSelectorSelectionMap.put(ResourceParser.TEXT_MEDIUM, R.id.iv_medium_select);
@@ -151,6 +165,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        /*
+         * 首次创建时必须先根据 Intent 建立 WorkingNote，再绑定界面资源。
+         * 如果是系统重建，WorkingNote 会在 onRestoreInstanceState 中按便签 id 恢复，
+         * 因而这里不能重复按原始 Intent 创建一条空便签。
+         */
         super.onCreate(savedInstanceState);
         this.setContentView(R.layout.note_edit);
 
@@ -186,6 +205,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
          */
         mWorkingNote = null;
         if (TextUtils.equals(Intent.ACTION_VIEW, intent.getAction())) {
+            /*
+             * ACTION_VIEW 表示打开已有便签。搜索结果会把真实 id 放在
+             * SearchManager.EXTRA_DATA_KEY 中，同时传入用户查询词用于高亮。
+             * 加载前先验证记录仍然可见，处理搜索结果过期或便签已删除的情况。
+             */
             long noteId = intent.getLongExtra(Intent.EXTRA_UID, 0);
             mUserQuery = "";
 
@@ -198,6 +222,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             }
 
             if (!DataUtils.visibleInNoteDatabase(getContentResolver(), noteId, Notes.TYPE_NOTE)) {
+                // 目标已不存在时退回列表，避免后续以无效 id 构造 WorkingNote。
                 Intent jump = new Intent(this, NotesListActivity.class);
                 startActivity(jump);
                 showToast(R.string.error_note_not_exist);
@@ -216,6 +241,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                             | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         } else if(TextUtils.equals(Intent.ACTION_INSERT_OR_EDIT, intent.getAction())) {
             // New note
+            /*
+             * 新建入口可能来自普通列表、桌面 Widget 或通话记录。
+             * 这些来源共享同一编辑界面，但需要把文件夹、Widget 和背景色等上下文
+             * 预先写入 WorkingNote，第一次保存时才能建立完整的数据库记录。
+             */
             long folderId = intent.getLongExtra(Notes.INTENT_EXTRA_FOLDER_ID, 0);
             int widgetId = intent.getIntExtra(Notes.INTENT_EXTRA_WIDGET_ID,
                     AppWidgetManager.INVALID_APPWIDGET_ID);
@@ -228,6 +258,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             String phoneNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
             long callDate = intent.getLongExtra(Notes.INTENT_EXTRA_CALL_DATE, 0);
             if (callDate != 0 && phoneNumber != null) {
+                /*
+                 * 同一号码和通话时间只应对应一条通话便签。
+                 * 若数据库中已有记录则直接加载，否则先创建空便签再转换类型，
+                 * 防止重复接收通话事件时产生两条内容相同的记录。
+                 */
                 if (TextUtils.isEmpty(phoneNumber)) {
                     Log.w(TAG, "The call record number is null");
                 }
@@ -246,6 +281,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                     mWorkingNote.convertToCallNote(phoneNumber, callDate);
                 }
             } else {
+                // 普通新建场景只创建内存对象，用户输入有效内容后才真正插入数据库。
                 mWorkingNote = WorkingNote.createEmptyNote(this, folderId, widgetId, widgetType,
                         bgResId);
             }
@@ -254,11 +290,13 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                     WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                             | WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
         } else {
+            // 未声明支持的 action 无法判断打开还是新建，直接结束比误写数据库更安全。
             Log.e(TAG, "Intent not specified action, should not support");
             finish();
             return false;
         }
         mWorkingNote.setOnSettingStatusChangedListener(this);
+        // 注册回调后，模型中的颜色、清单、提醒和 Widget 变化才能同步回当前界面。
         return true;
     }
 
@@ -269,6 +307,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void initNoteScreen() {
+        /*
+         * 每次回到前台都从 WorkingNote 重建可见状态。
+         * 普通文本使用单个 EditText；清单文本则拆成若干带复选框的编辑行。
+         * 两种模式最终仍共享同一个字符串内容，切换时必须完成双向转换。
+         */
         mNoteEditor.setTextAppearance(this, TextAppearanceResources
                 .getTexAppearanceResource(mFontSizeId));
         if (mWorkingNote.getCheckListMode() == TextNote.MODE_CHECK_LIST) {
@@ -278,6 +321,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mNoteEditor.setSelection(mNoteEditor.getText().length());
         }
         for (Integer id : sBgSelectorSelectionMap.keySet()) {
+            // 先清除所有选择标记，避免 Activity 恢复后出现多个颜色同时选中的残留状态。
             findViewById(sBgSelectorSelectionMap.get(id)).setVisibility(View.GONE);
         }
         mHeadViewPanel.setBackgroundResource(mWorkingNote.getTitleBgResId());
@@ -296,6 +340,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void showAlertHeader() {
+        /*
+         * 提醒时间保存在便签模型中。这里只负责展示，不重新安排 AlarmManager。
+         * 已经过期的提醒仍显示“已过期”，便于用户识别旧设置并主动删除或重设。
+         */
         if (mWorkingNote.hasClockAlert()) {
             long time = System.currentTimeMillis();
             if (time > mWorkingNote.getAlertDate()) {
@@ -327,6 +375,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
          * is no id which is equivalent to create new note
          */
         if (!mWorkingNote.existInDatabase()) {
+            // 新便签只有成功保存后才有稳定 id，系统重建时才能定位同一条记录。
             saveNote();
         }
         outState.putLong(Intent.EXTRA_UID, mWorkingNote.getNoteId());
@@ -335,6 +384,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        /*
+         * 颜色和字号选择器是临时浮层。触摸落在浮层外时先关闭浮层并消费事件，
+         * 防止同一次触摸继续传给编辑器，造成光标移动或误触其他按钮。
+         */
         if (mNoteBgColorSelector.getVisibility() == View.VISIBLE
                 && !inRangeOfView(mNoteBgColorSelector, ev)) {
             mNoteBgColorSelector.setVisibility(View.GONE);
@@ -350,6 +403,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private boolean inRangeOfView(View view, MotionEvent ev) {
+        // 将控件的屏幕坐标与触摸坐标比较，右边界和下边界也必须包含控件尺寸。
         int []location = new int[2];
         view.getLocationOnScreen(location);
         int x = location[0];
@@ -364,6 +418,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void initResources() {
+        /*
+         * 该方法只进行控件查找、监听器注册和用户偏好恢复。
+         * WorkingNote 的内容填充留给 initNoteScreen，避免资源绑定与业务状态混杂。
+         */
         mHeadViewPanel = findViewById(R.id.note_title);
         mNoteHeaderHolder = new HeadViewHolder();
         mNoteHeaderHolder.tvModified = (TextView) findViewById(R.id.tv_modified_date);
@@ -392,6 +450,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
          * return the {@link ResourceParser#BG_DEFAULT_FONT_SIZE}
          */
         if(mFontSizeId >= TextAppearanceResources.getResourcesSize()) {
+            // 资源版本变化可能使旧偏好越界，此时回退到默认字号而不是直接索引数组。
             mFontSizeId = ResourceParser.BG_DEFAULT_FONT_SIZE;
         }
         mEditTextList = (LinearLayout) findViewById(R.id.note_edit_list);
@@ -399,6 +458,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     protected void onPause() {
+        /*
+         * 离开编辑界面时统一保存，可覆盖返回键、来电、切换应用等多种路径。
+         * saveNote 内部会判断内容是否值得保存以及是否真的发生变化，
+         * 因此生命周期回调可以安全地重复调用而不产生无意义写入。
+         */
         super.onPause();
         if(saveNote()) {
             Log.d(TAG, "Note data was saved with length:" + mWorkingNote.getContent().length());
@@ -407,6 +471,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void updateWidget() {
+        /*
+         * 只有与当前便签绑定的 Widget 类型才会收到刷新广播。
+         * Widget id 作为附加参数传递，使 Provider 只更新对应实例而非全部桌面组件。
+         */
         Intent intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
         if (mWorkingNote.getWidgetType() == Notes.TYPE_WIDGET_2X) {
             intent.setClass(this, NoteWidgetProvider_2x.class);
@@ -426,6 +494,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onClick(View v) {
+        /*
+         * 所有背景色和字号按钮共用一个监听器，通过静态映射确定业务值。
+         * 每次选择后立即隐藏面板，实际持久化仍由 WorkingNote 的差异保存机制完成。
+         */
         int id = v.getId();
         if (id == R.id.btn_set_bg_color) {
             mNoteBgColorSelector.setVisibility(View.VISIBLE);
@@ -454,6 +526,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     public void onBackPressed() {
+        // 返回键优先关闭设置浮层；只有没有临时面板时才真正保存并退出 Activity。
         if(clearSettingState()) {
             return;
         }
@@ -463,6 +536,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private boolean clearSettingState() {
+        // 返回值表示本次是否只处理了浮层，用于阻止返回键同时结束编辑界面。
         if (mNoteBgColorSelector.getVisibility() == View.VISIBLE) {
             mNoteBgColorSelector.setVisibility(View.GONE);
             return true;
@@ -474,6 +548,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onBackgroundColorChanged() {
+        // 模型颜色变化后同步选择标记、标题和正文背景，保证界面使用同一主题编号。
         findViewById(sBgSelectorSelectionMap.get(mWorkingNote.getBgColorId())).setVisibility(
                 View.VISIBLE);
         mNoteEditorPanel.setBackgroundResource(mWorkingNote.getBgColorResId());
@@ -482,6 +557,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
+        /*
+         * 菜单依赖当前便签类型和状态，因此每次打开前都重新构建。
+         * 通话记录使用受限菜单；提醒相关菜单则在“设置”和“删除”之间互斥显示。
+         */
         if (isFinishing()) {
             return true;
         }
@@ -507,6 +586,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        // 菜单动作只更新 WorkingNote 或启动外部行为，最终保存仍集中在 saveNote。
         switch (item.getItemId()) {
             case R.id.menu_new_note:
                 createNewNote();
@@ -554,6 +634,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void setReminder() {
+        /*
+         * 选择器以当前时间作为初值。用户确认后只把毫秒时间写入模型；
+         * WorkingNote 随即通过设置变更监听器回调 onClockAlertChanged，
+         * 在该回调中保证便签已有 id 并安排系统闹钟。
+         */
         DateTimePickerDialog d = new DateTimePickerDialog(this, System.currentTimeMillis());
         d.setOnDateTimeSetListener(new OnDateTimeSetListener() {
             public void OnDateTimeSet(AlertDialog dialog, long date) {
@@ -575,6 +660,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void createNewNote() {
+        /*
+         * 新建下一条便签前先保存当前编辑内容，再结束本 Activity 并启动新实例。
+         * 这样新旧 WorkingNote 不会共用界面状态，同时沿用当前文件夹作为目标位置。
+         */
         // Firstly, save current editing notes
         saveNote();
 
@@ -587,6 +676,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void deleteCurrentNote() {
+        /*
+         * 未启用同步时直接批量删除；启用同步时移动到回收站，
+         * 让后续同步能够把删除意图传播到远端。最后标记 WorkingNote 已删除，
+         * 防止 onPause 再次把刚删除的内容保存回来。
+         */
         if (mWorkingNote.existInDatabase()) {
             HashSet<Long> ids = new HashSet<Long>();
             long id = mWorkingNote.getNoteId();
@@ -621,14 +715,20 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             saveNote();
         }
         if (mWorkingNote.getNoteId() > 0) {
+            /*
+             * 便签 URI 被放进 Intent.data，系统会把不同便签视为不同 PendingIntent。
+             * 同一个便签再次设置时则能取得等价 PendingIntent，从而覆盖或取消旧闹钟。
+             */
             Intent intent = new Intent(this, AlarmReceiver.class);
             intent.setData(ContentUris.withAppendedId(Notes.CONTENT_NOTE_URI, mWorkingNote.getNoteId()));
             PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
             AlarmManager alarmManager = ((AlarmManager) getSystemService(ALARM_SERVICE));
             showAlertHeader();
             if(!set) {
+                // 删除提醒时取消系统闹钟；提醒日期字段已由 WorkingNote 更新为传入值。
                 alarmManager.cancel(pendingIntent);
             } else {
+                // RTC_WAKEUP 使用绝对墙上时间，并允许设备休眠时唤醒接收器。
                 alarmManager.set(AlarmManager.RTC_WAKEUP, date, pendingIntent);
             }
         } else {
@@ -647,6 +747,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onEditTextDelete(int index, String text) {
+        /*
+         * 清单行在行首按退格时与上一行合并。
+         * 删除当前 View 后必须重排后续行的索引，否则下一次回调会定位错误；
+         * 合并后把光标放在原上一行末尾，符合连续编辑的预期。
+         */
         int childCount = mEditTextList.getChildCount();
         if (childCount == 1) {
             return;
@@ -673,6 +778,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onEditTextEnter(int index, String text) {
+        /*
+         * 回车把光标后的文本拆到新行。新 View 插入指定位置后，
+         * 后续行索引整体加一，并把焦点放到新行开头。
+         */
         /**
          * Should not happen, check for debug
          */
@@ -692,6 +801,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private void switchToListMode(String text) {
+        /*
+         * 存储格式以换行分隔条目，并用特殊字符标识勾选状态。
+         * 重建列表时跳过空行，最后始终补一个空编辑项，便于用户继续追加内容。
+         */
         mEditTextList.removeAllViews();
         String[] items = text.split("\n");
         int index = 0;
@@ -709,6 +822,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private Spannable getHighlightQueryResult(String fullText, String userQuery) {
+        /*
+         * 从搜索结果进入编辑页时，仅为匹配片段附加背景色 Span，
+         * 不改变 WorkingNote 保存的原始字符串。空查询直接返回普通 Spannable。
+         */
         SpannableString spannable = new SpannableString(fullText == null ? "" : fullText);
         if (!TextUtils.isEmpty(userQuery)) {
             mPattern = Pattern.compile(userQuery);
@@ -726,6 +843,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private View getListItem(String item, int index) {
+        /*
+         * 每个清单项由 CheckBox 和 NoteEditText 组成。
+         * 勾选状态既影响删除线，也会在保存时重新编码为前缀字符；
+         * 读取旧内容时需要先移除前缀，避免标记出现在可编辑正文中。
+         */
         View view = LayoutInflater.from(this).inflate(R.layout.note_edit_list_item, null);
         final NoteEditText edit = (NoteEditText) view.findViewById(R.id.et_edit_text);
         edit.setTextAppearance(this, TextAppearanceResources.getTexAppearanceResource(mFontSizeId));
@@ -757,6 +879,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onTextChange(int index, boolean hasText) {
+        // 空的占位行不显示复选框，有内容后再显示，减少清单末尾的视觉干扰。
         if (index >= mEditTextList.getChildCount()) {
             Log.e(TAG, "Wrong index, should not happen");
             return;
@@ -769,6 +892,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     public void onCheckListModeChanged(int oldMode, int newMode) {
+        /*
+         * 切换模式前后必须先把当前控件内容收敛到 WorkingNote。
+         * 从清单转普通文本时，只有不存在已勾选项才移除未勾选前缀，
+         * 避免在有混合状态时丢失完成信息。
+         */
         if (newMode == TextNote.MODE_CHECK_LIST) {
             switchToListMode(mNoteEditor.getText().toString());
         } else {
@@ -783,6 +911,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private boolean getWorkingText() {
+        /*
+         * 这是界面状态进入模型的唯一汇合点。
+         * 清单模式逐行编码勾选标记并忽略空项；普通模式直接读取 EditText。
+         * 返回值表示是否存在已勾选项，供模式切换时决定能否安全去除标记。
+         */
         boolean hasChecked = false;
         if (mWorkingNote.getCheckListMode() == TextNote.MODE_CHECK_LIST) {
             StringBuilder sb = new StringBuilder();
@@ -806,6 +939,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private boolean saveNote() {
+        /*
+         * 先采集界面文本，再交给 WorkingNote 判断新建、更新或无需保存。
+         * 保存成功后设置 RESULT_OK，列表页据此区分返回原位置和新增后刷新到顶部。
+         */
         getWorkingText();
         boolean saved = mWorkingNote.saveNote();
         if (saved) {
@@ -828,6 +965,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
          * save it
          */
         if (!mWorkingNote.existInDatabase()) {
+            // 桌面快捷方式依赖稳定便签 id，因此新便签必须先尝试持久化。
             saveNote();
         }
 
@@ -857,6 +995,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     }
 
     private String makeShortcutIconTitle(String content) {
+        // 快捷方式标题去除清单状态符号并限制长度，避免桌面标签被控制字符污染。
         content = content.replace(TAG_CHECKED, "");
         content = content.replace(TAG_UNCHECKED, "");
         return content.length() > SHORTCUT_ICON_TITLE_MAX_LEN ? content.substring(0,
