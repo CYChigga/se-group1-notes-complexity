@@ -24,8 +24,12 @@ import net.micode.notes.data.Notes;
 import net.micode.notes.tool.ResourceParser;
 
 
+/**
+ * 2x2 规格的小部件：只覆写布局、背景与类型常量，更新逻辑全部继承自基类。
+ */
 public class NoteWidgetProvider_2x extends NoteWidgetProvider {
     @Override
+    // 系统回调入口，直接转交基类处理，保证 2x / 4x 行为一致。
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.update(context, appWidgetManager, appWidgetIds);
     }
@@ -36,11 +40,13 @@ public class NoteWidgetProvider_2x extends NoteWidgetProvider {
     }
 
     @Override
+    // 背景按便签配色映射到 2x 专用资源表，与 4x 的表不是同一套。
     protected int getBgResourceId(int bgId) {
         return ResourceParser.WidgetBgResources.getWidget2xBgResource(bgId);
     }
 
     @Override
+    // 类型常量写进 Intent 一起传给编辑页，用于新建便签时回写正确的 widget_type。
     protected int getWidgetType() {
         return Notes.TYPE_WIDGET_2X;
     }
