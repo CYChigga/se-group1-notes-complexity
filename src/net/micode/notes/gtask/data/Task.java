@@ -32,6 +32,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
+/**
+ * 便签在 Google Tasks 侧的实体：一条 Task 对应本地一条 note 记录。
+ * 除基类的 gid / 时间戳外，额外持有正文副本、所属清单与前一个兄弟节点，
+ * mMetaInfo 是远端 meta 里那份本地便签 JSON 的解析结果，
+ */
 public class Task extends Node {
     private static final String TAG = Task.class.getSimpleName();
 
@@ -54,6 +59,9 @@ public class Task extends Node {
         mMetaInfo = null;
     }
 
+    /**
+     * 生成 create 报文。actionId 由 GTaskClient 单调递增分配，
+     */
     public JSONObject getCreateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -103,6 +111,10 @@ public class Task extends Node {
         return js;
     }
 
+    /**
+     * 生成 update 报文：只带名称、正文与删除标记，
+     * 远端任务没有颜色、目录概念，其余状态由 MetaData 承载。
+     */
     public JSONObject getUpdateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -135,6 +147,9 @@ public class Task extends Node {
         return js;
     }
 
+    /**
+     * 从远端报文回填字段，逐项 has() 判断再取值——增量响应可能只带变化字段。
+     */
     public void setContentByRemoteJSON(JSONObject js) {
         if (js != null) {
             try {
@@ -175,6 +190,9 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 用本地便签 JSON 覆盖远端字段：只取 mime_type=NOTE 的分片作标题，
+     */
     public void setContentByLocalJSON(JSONObject js) {
         if (js == null || !js.has(GTaskStringUtils.META_HEAD_NOTE)
                 || !js.has(GTaskStringUtils.META_HEAD_DATA)) {
@@ -204,6 +222,10 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * mMetaInfo 为空说明是网页端新建的，只能用 name 拼一条最小 JSON；
+     * 否则以 meta 的完整 JSON 打底，仅把正文换成远端最新 name。
+     */
     public JSONObject getLocalJSONFromContent() {
         String name = getName();
         try {
@@ -247,6 +269,9 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 注入 meta 解析结果；解析失败只清空 mMetaInfo，
+     */
     public void setMetaInfo(MetaData metaData) {
         if (metaData != null && metaData.getNotes() != null) {
             try {
@@ -258,6 +283,11 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 本地改了+远端未变→推送，两边都改→UPDATE_CONFLICT（当前策略是本地覆盖）。
+     * 判定前先比对 meta 里的 note id 与游标 id，不一致说明本地记录被重建过，
+     * 此时任何方向的覆盖都会丢数据，统一降级为“拉取到本地”。
+     */
     public int getSyncAction(Cursor c) {
         try {
             JSONObject noteInfo = null;
@@ -311,6 +341,9 @@ public class Task extends Node {
         return SYNC_ACTION_ERROR;
     }
 
+    /**
+     * 判空入库：远端空壳 Task（点了新建却没输入）不应在本地留下空便签。
+     */
     public boolean isWorthSaving() {
         return mMetaInfo != null || (getName() != null && getName().trim().length() > 0)
                 || (getNotes() != null && getNotes().trim().length() > 0);
