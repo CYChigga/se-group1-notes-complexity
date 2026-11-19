@@ -16,6 +16,12 @@
 
 package net.micode.notes.gtask.exception;
 
+/**
+ * 同步链路的“网络不可用”：登录失败、连接或读写超时、HTTP 响应无法解析成 JSON。
+ * 与 ActionFailureException 相对——它属于可重试故障，因此设计为受检异常，
+ * 强制调用方在方法签名上声明，并在边界处转成 STATE_NETWORK_ERROR 提示用户稍后再试。
+ * 保留带 cause 的构造器，便于把底层 IOException 原样带进日志。
+ */
 public class NetworkFailureException extends Exception {
     private static final long serialVersionUID = 2107610287180234136L;
 
