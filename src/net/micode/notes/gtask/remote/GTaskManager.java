@@ -48,9 +48,21 @@ import java.util.Iterator;
 import java.util.Map;
 
 
+/**
+ * 同步总控：一次完整同步的全部编排都在这里。
+ * 用六张哈希表维护“远端世界”与“本地世界”的对应关系：
+ * 全部远端节点、清单、便签元数据、gid 与本地 id 的双向映射、待删 id 集合。
+ * 每处理完一个节点就把它从 mGTaskHashMap 移除，处理完仍留在表里的，
+ * 就是“远端有、本地没有”的新增项——这是最后一步 ADD_LOCAL 的来源。
+ * 表在同步开始与结束时各清一次，避免失败残留污染下一轮。
+ * 本类不碰 HTTP 细节，报文拼装与网络交互全部委托给 GTaskClient。
+ */
 public class GTaskManager {
     private static final String TAG = GTaskManager.class.getSimpleName();
 
+    // 返回值只用于 UI 选择提示文案，不参与重试决策：
+    // 0 成功、1 网络错误（可重试）、2 内部错误（不可重试）、
+    // 3 已有同步在跑（并发闸门）、4 被用户取消。
     public static final int STATE_SUCCESS = 0;
 
     public static final int STATE_NETWORK_ERROR = 1;
@@ -73,6 +85,9 @@ public class GTaskManager {
 
     private boolean mCancelled;
 
+    // 下面六张表在一次同步内是“权威状态”：清单表与全节点表分开，
+    // 是因为目录同步需要按清单遍历，而便签同步需要按 gid 直接定位节点。
+    // 两个映射表（gid↔id）在新增节点后立即更新，供后续父目录查找使用。
     private HashMap<String, TaskList> mGTaskListHashMap;
 
     private HashMap<String, Node> mGTaskHashMap;
@@ -99,6 +114,8 @@ public class GTaskManager {
         mNidToGid = new HashMap<Long, String>();
     }
 
+    // 单例 + synchronized：同步入口可能来自列表页、设置页、定时任务三处，
+    // 用类锁保证首次创建不会出现两个实例各自持有半套状态。
     public static synchronized GTaskManager getInstance() {
         if (mInstance == null) {
             mInstance = new GTaskManager();
@@ -106,11 +123,22 @@ public class GTaskManager {
         return mInstance;
     }
 
+    // 登录需要 Activity 上下文弹账户授权框，故必须在启动同步前注入；
+    // 静态单例持有 Activity 有泄漏风险，但同步是短任务，可接受。
     public synchronized void setActivityContext(Activity activity) {
         // used for getting authtoken
         mActivity = activity;
     }
 
+    /**
+     * 同步主流程：并发闸门 → 登录 → 拉取远端 → 内容同步。
+     * 闸门用 mSyncing 标志而非锁：重复触发时直接返回“同步中”，
+     * 而不是排队等待——用户看到的是进度提示，不该再排一次队。
+     * 异常一律在此边界转成状态码，不向上抛，UI 只认状态码；
+     * finally 清空全部缓存，保证失败后下一轮从干净状态开始。
+     * @return STATE_SUCCESS / STATE_NETWORK_ERROR / STATE_INTERNAL_ERROR /
+     *         STATE_SYNC_IN_PROGRESS / STATE_SYNC_CANCELLED
+     */
     public int sync(Context context, GTaskASyncTask asyncTask) {
         if (mSyncing) {
             Log.d(TAG, "Sync is in progress");
@@ -133,6 +161,8 @@ public class GTaskManager {
 
             // login google task
             if (!mCancelled) {
+                // 登录失败按网络错误处理：token 过期、无网络、账户被移除都归此类，
+                // 用户侧的统一动作是“稍后重试”或“去设置页重新选账户”。
                 if (!client.login(mActivity)) {
                     throw new NetworkFailureException("login google task failed");
                 }
@@ -168,6 +198,12 @@ public class GTaskManager {
         return mCancelled ? STATE_SYNC_CANCELLED : STATE_SUCCESS;
     }
 
+    /**
+     * 拉取远端全量：先单独处理 meta 清单，再遍历其余 MIUI/ 清单及其任务。
+     * 必须先 meta 后任务——Task 的冲突判定依赖 meta 里那份本地便签 JSON。
+     * 用两次独立循环而非一次：第一遍只为定位 meta 清单并装载元数据，
+     * 第二遍才装载任务，这样即使 meta 清单排在返回列表末尾也不会错序。
+     */
     private void initGTaskList() throws NetworkFailureException {
         if (mCancelled)
             return;
@@ -204,6 +240,8 @@ public class GTaskManager {
             }
 
             // create meta list if not existed
+            // 首次同步还没有 meta 清单，就地创建；
+            // createTaskList 会立刻发请求并把新 gid 写回 mMetaList，后续 meta 才能挂上去。
             if (mMetaList == null) {
                 mMetaList = new TaskList();
                 mMetaList.setName(GTaskStringUtils.MIUI_FOLDER_PREFFIX
@@ -247,6 +285,12 @@ public class GTaskManager {
         }
     }
 
+    /**
+     * 内容同步四段：本地已删除 → 目录 → 便签 → 远端剩余项。
+     * 顺序不可颠倒：目录必须先于便签，否则便签找不到父目录映射；
+     * 删除必须先于更新，否则会在已删记录上发无意义的更新请求。
+     * 每一步都会检查 mCancelled，用户取消后能在下一个节点边界及时退出。
+     */
     private void syncContent() throws NetworkFailureException {
         int syncType;
         Cursor c = null;
@@ -259,6 +303,8 @@ public class GTaskManager {
             return;
         }
 
+        // 回收站里的记录统一按“删除远端”处理，并累积 id 待同步成功后批量清除；
+        // 查询条件排除系统目录，避免把默认目录、通话记录目录误删。
         // for local deleted note
         try {
             c = mContentResolver.query(Notes.CONTENT_NOTE_URI, SqlNote.PROJECTION_NOTE,
@@ -351,6 +397,13 @@ public class GTaskManager {
 
     }
 
+    /**
+     * 目录同步：根目录与通话记录目录是两个特例，按固定 id 单独查询处理；
+     * 其余目录走“按类型查询 + 逐个判定动作”的通用路径。
+     * 系统目录只允许改名（远端名称不符才更新），不允许新建或删除——
+     * 它们在本地是固定 id，删掉会让所有便签失去归属。
+     * 远端新增的目录放在最后统一落地，避免与本地同名目录重复创建。
+     */
     private void syncFolder() throws NetworkFailureException {
         Cursor c = null;
         String gid;
@@ -476,6 +529,13 @@ public class GTaskManager {
             GTaskClient.getInstance().commitUpdate();
     }
 
+    /**
+     * 动作分发：把 getSyncAction 的判定结果落到具体操作上。
+     * 冲突（UPDATE_CONFLICT）当前直接按“本地覆盖远端”处理，
+     * 方法内注释也承认这只是权宜之计，真正的双向合并没有实现。
+     * 未知动作抛 ActionFailureException，让整批同步失败而不是静默跳过。
+     * 每个分支入口都先判 mCancelled，保证长循环里的取消能生效。
+     */
     private void doContentSync(int syncType, Node node, Cursor c) throws NetworkFailureException {
         if (mCancelled) {
             return;
@@ -522,6 +582,13 @@ public class GTaskManager {
         }
     }
 
+    /**
+     * 远端新增 → 落地本地。目录按名称映射到系统目录或新建普通目录；
+     * 便签则先清理会冲突的 id 再建。
+     * 关键边界：远端 JSON 里带的 id 在本地可能已被占用（换账号后 id 会重复），
+     * 入库前必须用 existInNoteDatabase 校验，占用则删掉该 id 让本地重新分配。
+     * 目录落地时若名称命中系统目录常量，直接复用固定 id 而不新建。
+     */
     private void addLocalNode(Node node) throws NetworkFailureException {
         if (mCancelled) {
             return;
@@ -596,6 +663,8 @@ public class GTaskManager {
         updateRemoteMeta(node.getGid(), sqlNote);
     }
 
+    // 拉取覆盖：用远端 JSON 重写本地字段并带版本校验提交；
+    // 父目录映射缺失说明远端任务挂在本地的未知目录下，直接抛错中断。
     private void updateLocalNode(Node node, Cursor c) throws NetworkFailureException {
         if (mCancelled) {
             return;
@@ -619,6 +688,11 @@ public class GTaskManager {
         updateRemoteMeta(node.getGid(), sqlNote);
     }
 
+    /**
+     * 本地新增 → 推到远端。便签要先把父目录换成远端 gid，目录则要先按名称去重：
+     * 远端可能已有同名清单（上一轮同步半途失败留下的），此时复用而不是再建一个。
+     * 提交成功后立刻回写 gtask_id 并清本地修改标记，避免下一轮重复推送。
+     */
     private void addRemoteNode(Node node, Cursor c) throws NetworkFailureException {
         if (mCancelled) {
             return;
@@ -692,6 +766,10 @@ public class GTaskManager {
         mNidToGid.put(sqlNote.getId(), n.getGid());
     }
 
+    /**
+     * 本地修改 → 推到远端：先攒进批量更新队列，再单独判断是否跨清单移动。
+     * 移动必须发独立的 move 请求，因为 update 报文里没有 parent 字段。
+     */
     private void updateRemoteNode(Node node, Cursor c) throws NetworkFailureException {
         if (mCancelled) {
             return;
@@ -730,6 +808,8 @@ public class GTaskManager {
         sqlNote.commit(true);
     }
 
+    // 元数据是便签的“影子记录”：已有则更新，没有则新建并挂到 meta 清单下；
+    // 目录没有额外字段，故先判 isNoteType，目录在这里直接跳过。
     private void updateRemoteMeta(String gid, SqlNote sqlNote) throws NetworkFailureException {
         if (sqlNote != null && sqlNote.isNoteType()) {
             MetaData metaData = mMetaHashMap.get(gid);
@@ -746,6 +826,10 @@ public class GTaskManager {
         }
     }
 
+    // 收尾：重新拉一次远端，把每个节点的 lastModified 写回本地 SYNC_ID。
+    // SYNC_ID 是下一轮判定的基准（等于上次同步时远端的时间戳），
+    // 刷新在 commitUpdate 之后调用，确保写回的是服务端已确认的时间戳。
+    // 必须在所有写操作完成后刷新；此时若还有本地 gid 匹配不上远端，说明状态已脏，直接抛错。
     private void refreshLocalSyncId() throws NetworkFailureException {
         if (mCancelled) {
             return;

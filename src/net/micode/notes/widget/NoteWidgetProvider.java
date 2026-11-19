@@ -32,6 +32,12 @@ import net.micode.notes.tool.ResourceParser;
 import net.micode.notes.ui.NoteEditActivity;
 import net.micode.notes.ui.NotesListActivity;
 
+/**
+ * 桌面小部件的公共基类：2x 与 4x 只差布局、背景资源与类型常量，更新逻辑完全复用。
+ * 一次更新做三件事：按 widget_id 查绑定便签、装配 RemoteViews、挂上点击意图。
+ * 点击意图分两种：有便签则进编辑页（ACTION_VIEW 带便签 id），
+ * 没有则进新建流程（ACTION_INSERT_OR_EDIT，编辑页创建后回写 widget 绑定）。
+ */
 public abstract class NoteWidgetProvider extends AppWidgetProvider {
     public static final String [] PROJECTION = new String [] {
         NoteColumns.ID,
@@ -46,6 +52,8 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "NoteWidgetProvider";
 
     @Override
+    // 小部件被移除时把便签的 widget_id 复位，否则该便签会一直认为“我在桌面上”，
+    // 之后每次保存都向一个已不存在的 widget 广播更新。
     public void onDeleted(Context context, int[] appWidgetIds) {
         ContentValues values = new ContentValues();
         values.put(NoteColumns.WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
@@ -57,6 +65,7 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    // 查询条件是 widget_id 相等且不在废纸篓——已删除的便签不该继续显示在桌面。
     private Cursor getNoteWidgetInfo(Context context, int widgetId) {
         return context.getContentResolver().query(Notes.CONTENT_NOTE_URI,
                 PROJECTION,
@@ -69,6 +78,11 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
         update(context, appWidgetManager, appWidgetIds, false);
     }
 
+    // 遍历每个实例：先查绑定便签，再决定显示摘要还是“暂无内容”。
+    // 同一 widget_id 命中多条便签属于数据异常（正常应唯一），
+    // 此时记错误并直接 return——注意这会让同批其余 widget 得不到刷新，是已知缺陷。
+    // privacyMode 分支目前不可达：Manifest 声明了 PRIVACY_MODE_CHANGED，
+    // 但基类未覆写 onReceive，没有任何入口能以 true 调到这里。
     private void update(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds,
             boolean privacyMode) {
         for (int i = 0; i < appWidgetIds.length; i++) {

@@ -1,0 +1,17 @@
+﻿文件路径,新增注释行数,对应commit号
+src/net/micode/notes/gtask/exception/ActionFailureException.java,6,5872314d
+src/net/micode/notes/gtask/exception/NetworkFailureException.java,6,264131b3
+src/net/micode/notes/gtask/data/Node.java,8,3eaf9fe9
+src/net/micode/notes/gtask/data/MetaData.java,7,c18da1e7
+src/net/micode/notes/gtask/data/SqlData.java,19,4733cc42
+src/net/micode/notes/gtask/data/Task.java,33,c4ec9b03
+src/net/micode/notes/gtask/data/TaskList.java,33,1758ce7d
+src/net/micode/notes/gtask/data/SqlNote.java,54,c5d006a9
+src/net/micode/notes/gtask/remote/GTaskManager.java,84,a20b7ff1
+src/net/micode/notes/gtask/remote/GTaskClient.java,60,70828141
+src/net/micode/notes/gtask/remote/GTaskASyncTask.java,12,096f6aef
+src/net/micode/notes/gtask/remote/GTaskSyncService.java,12,bb90a901
+src/net/micode/notes/widget/NoteWidgetProvider.java,14,f0592f93
+src/net/micode/notes/widget/NoteWidgetProvider_2x.java,6,7836b871
+src/net/micode/notes/widget/NoteWidgetProvider_4x.java,6,5742dce6
+合计,360,

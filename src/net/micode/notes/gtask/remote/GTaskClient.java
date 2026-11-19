@@ -61,9 +61,17 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 
+/**
+ * Google Tasks 的 HTTP 客户端：登录、拉取、批量提交三件事。
+ * 走的是 2011 年前后的私有接口——GET /tasks/ig 返回一段 _setup({...}) 脚本，
+ * POST /tasks/r/ig 接受 action_list 报文，没有公开文档，字段名靠逆向得来。
+ * 单例持有 cookie 与 client_version，一次同步内的所有请求复用同一会话。
+ */
 public class GTaskClient {
     private static final String TAG = GTaskClient.class.getSimpleName();
 
+    // 三个端点：/tasks/ 用于拼自定义域名前缀，ig 是读入口，r/ig 是写入口。
+    // 注意线上已废弃此接口，本模块的实际价值是同步协议的设计样例而非可用功能。
     private static final String GTASK_URL = "https://mail.google.com/tasks/";
 
     private static final String GTASK_GET_URL = "https://mail.google.com/tasks/ig";
@@ -72,6 +80,9 @@ public class GTaskClient {
 
     private static GTaskClient mInstance = null;
 
+    // mClientVersion 由登录响应里的 _setup 给出，写请求必须原样带回；
+    // mActionId 单调递增，是批量响应与请求一一对应的唯一凭据。
+    // mLastLoginTime 用于 5 分钟会话过期判断，避免每次请求都重新握手。
     private DefaultHttpClient mHttpClient;
 
     private String mGetUrl;
@@ -109,6 +120,15 @@ public class GTaskClient {
         return mInstance;
     }
 
+    /**
+     * 保证“可用的已登录会话”。三层短路，逐层放宽条件：
+     * 1) 距上次登录不足 5 分钟 → 复用；
+     * 2) 用户在设置页换了账户 → 强制重登（否则会拿旧账户的 cookie 去同步新账户）；
+     * 3) 优先尝试自定义域名端点（企业邮局），失败再回落官方端点。
+     * 自定义域名的判断依据是邮箱后缀不是 gmail.com / googlemail.com。
+     * @return false 表示拿不到 token 或两个端点都登不上
+     * 登录成功后置位 mLoggedin，同一轮同步内的后续请求不再重复握手。
+     */
     public boolean login(Activity activity) {
         // we suppose that the cookie would expire after 5 minutes
         // then we need to re-login
@@ -164,6 +184,13 @@ public class GTaskClient {
         return true;
     }
 
+    /**
+     * 向 AccountManager 申请 goanna_mobile 类型的 authToken。
+     * 只认设置页里选中的那一个账户名——多账户设备上取第一个会同步到错误账户。
+     * invalidateToken 为 true 时先作废旧 token 再递归取新的，
+     * 这是 token 过期（服务端 401）后唯一可靠的自愈路径。
+     * @return null 表示无 Google 账户、账户名不匹配或取 token 抛异常
+     */
     private String loginGoogleAccount(Activity activity, boolean invalidateToken) {
         String authToken;
         AccountManager accountManager = AccountManager.get(activity);
@@ -207,6 +234,8 @@ public class GTaskClient {
         return authToken;
     }
 
+    // 首次失败通常不是网络问题而是 token 失效，故换新 token 再试一次；
+    // 只重试一次，避免在无网络时陷入反复取 token 的循环。
     private boolean tryToLoginGtask(Activity activity, String authToken) {
         if (!loginGtask(authToken)) {
             // maybe the auth token is out of date, now let's invalidate the
@@ -225,6 +254,12 @@ public class GTaskClient {
         return true;
     }
 
+    /**
+     * 用 token 换取会话 cookie。响应是一段 HTML，真正的数据藏在
+     * _setup(…)}</script> 之间，用字符串定位后按 JSON 解析取 “v”（客户端版本号）。
+     * 连接超时 10s、读超时 15s：同步在后台线程跑，宁可失败也不长时间占用。
+     * 没有 GTL 前缀的 cookie 只记 warning 不失败——旧版本服务端不一定发这个 cookie。
+     */
     private boolean loginGtask(String authToken) {
         int timeoutConnection = 10000;
         int timeoutSocket = 15000;
@@ -291,6 +326,8 @@ public class GTaskClient {
         return httpPost;
     }
 
+    // 服务端可能返回 gzip 或 deflate，需按 Content-Encoding 解压；
+    // 逐行读并丢弃换行符，是因为 _setup 里的 JSON 被服务端折行排版过。
     private String getResponseContent(HttpEntity entity) throws IOException {
         String contentEncoding = null;
         if (entity.getContentEncoding() != null) {
@@ -323,6 +360,8 @@ public class GTaskClient {
         }
     }
 
+    // 所有写操作的唯一出口：表单编码 r=<json> 后 POST。
+    // 异常分流是刻意的——IO 类归为可重试的网络错误，JSON 类归为内部错误。
     private JSONObject postRequest(JSONObject js) throws NetworkFailureException {
         if (!mLoggedin) {
             Log.e(TAG, "please login first");
@@ -360,6 +399,8 @@ public class GTaskClient {
         }
     }
 
+    // 新建单个任务：先提交挂起的批量更新（保证顺序），再单独发 create，
+    // 拿到 new_id 后写回节点——这是后续所有更新/删除的前提。
     public void createTask(Task task) throws NetworkFailureException {
         commitUpdate();
         try {
@@ -412,6 +453,8 @@ public class GTaskClient {
         }
     }
 
+    // 提交攒批的更新：把 mUpdateArray 整体发一次，成功后清空。
+    // 之所以攒批：逐条发请求在弱网下耗时且容易被限流。
     public void commitUpdate() throws NetworkFailureException {
         if (mUpdateArray != null) {
             try {
@@ -433,6 +476,10 @@ public class GTaskClient {
         }
     }
 
+    // 超过 10 条就先提交一批再继续攒——请求体过大会被服务端拒绝，
+    // 这个上限是逆向得到的经验值，源码注释也标为“may result in an error”。
+     // 队列在 create / move / delete 之前都会被强制提交，保证动作顺序与本地一致。
+    // 注意此处只入队不发送，真正落网由 commitUpdate 或下一个 create/move 触发。
     public void addUpdateNode(Node node) throws NetworkFailureException {
         if (node != null) {
             // too many update items may result in an error
@@ -447,6 +494,13 @@ public class GTaskClient {
         }
     }
 
+    /**
+     * 跨清单移动任务。三个字段的取舍是这段代码最容易看错的地方：
+     * prior_sibling_id 仅在“同一清单内移动且不是第一个”时上报；
+     * dest_list 仅在“跨清单”时上报；source_list 始终上报。
+     * 报错字段会导致远端把任务插到错误位置，但接口不会返回错误。
+     * 同清单内移动且没有前驱时，服务端按 index 重新排序。
+     */
     public void moveTask(Task task, TaskList preParent, TaskList curParent)
             throws NetworkFailureException {
         commitUpdate();
@@ -486,6 +540,8 @@ public class GTaskClient {
         }
     }
 
+    // 删除 = 置 deleted 标记后走 update 报文，服务端据此移入已删除；
+    // 删除后清空更新队列，避免把已删节点又塞回批量提交。
     public void deleteNode(Node node) throws NetworkFailureException {
         commitUpdate();
         try {
@@ -509,6 +565,8 @@ public class GTaskClient {
         }
     }
 
+    // 读入口：GET 后同样要剥 _setup(…) 外壳，取 t.lists 数组；
+    // 未登录直接抛 ActionFailureException，而不是发一个必然 401 的请求。
     public JSONArray getTaskLists() throws NetworkFailureException {
         if (!mLoggedin) {
             Log.e(TAG, "please login first");
@@ -547,6 +605,8 @@ public class GTaskClient {
         }
     }
 
+    // 取某清单下的全部任务：动作类型 GET_ALL，get_deleted 固定 false——
+    // 已删除项由 DELETE 动作处理，不需要在列表里回来。
     public JSONArray getTaskList(String listGid) throws NetworkFailureException {
         commitUpdate();
         try {
