@@ -30,6 +30,12 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 
+/**
+ * 便签目录在 Google Tasks 侧的实体：一条清单（TaskList）对应一个本地目录。
+ * 除基类字段外维护子任务顺序（mChildren）与清单下标（mIndex），
+ * 因为远端靠 index + prior_sibling_id 排序，本地必须在链表上同步维护这两者。
+ * 系统目录（默认目录、通话记录目录）也映射为清单，只是名称带 MIUI/ 前缀。
+ */
 public class TaskList extends Node {
     private static final String TAG = TaskList.class.getSimpleName();
 
@@ -43,6 +49,9 @@ public class TaskList extends Node {
         mIndex = 1;
     }
 
+    /**
+     * 生成清单的 create 报文：只报名称、实体类型与下标，不含任务内容。
+     */
     public JSONObject getCreateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -74,6 +83,7 @@ public class TaskList extends Node {
         return js;
     }
 
+    /** 生成清单的 update 报文：仅名称与删除标记。 */
     public JSONObject getUpdateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -129,6 +139,10 @@ public class TaskList extends Node {
         }
     }
 
+    /**
+     * 由本地目录 JSON 生成远端清单名，规则是“MIUI/” + 目录名：
+     * 普通目录取 snippet；默认目录与通话记录目录取固定常量；其余系统目录视为非法。
+     */
     public void setContentByLocalJSON(JSONObject js) {
         if (js == null || !js.has(GTaskStringUtils.META_HEAD_NOTE)) {
             Log.w(TAG, "setContentByLocalJSON: nothing is avaiable");
@@ -157,6 +171,11 @@ public class TaskList extends Node {
         }
     }
 
+    /**
+     * 反向解析：去掉 MIUI/ 前缀得到目录名，再按名字反推类型。
+     * 名字等于默认目录或通话记录目录常量的判为系统目录，否则判为普通目录；
+     * 这是“靠名字识别身份”的约定，名字被用户改掉就会退化，属已知局限。
+     */
     public JSONObject getLocalJSONFromContent() {
         try {
             JSONObject js = new JSONObject();
@@ -183,6 +202,10 @@ public class TaskList extends Node {
         }
     }
 
+    /**
+     * 目录冲突比便签简单：本地未改就跟随远端，本地改了就推上去。
+     * 两边都改时同样返回 UPDATE_REMOTE——目录只是容器，本地改名更接近用户意图，
+     */
     public int getSyncAction(Cursor c) {
         try {
             if (c.getInt(SqlNote.LOCAL_MODIFIED_COLUMN) == 0) {
@@ -220,6 +243,10 @@ public class TaskList extends Node {
         return mChildren.size();
     }
 
+    /**
+     * 追加子任务并维护双向指针：prior sibling 指向前一个、parent 指向本清单，
+     * 这两个指针是生成 create 报文时 index 与 prior_sibling_id 的唯一来源。
+     */
     public boolean addChildTask(Task task) {
         boolean ret = false;
         if (task != null && !mChildren.contains(task)) {
@@ -260,6 +287,9 @@ public class TaskList extends Node {
         return true;
     }
 
+    /**
+     * 摘除后要修补后继节点的 prior sibling，否则链表断链会让远端排序错位。
+     */
     public boolean removeChildTask(Task task) {
         boolean ret = false;
         int index = mChildren.indexOf(task);
@@ -281,6 +311,9 @@ public class TaskList extends Node {
         return ret;
     }
 
+    /**
+     * 移动 = 先摘除再插入；下标相同直接返回，避免无意义的链表修补。
+     */
     public boolean moveChildTask(Task task, int index) {
 
         if (index < 0 || index >= mChildren.size()) {
