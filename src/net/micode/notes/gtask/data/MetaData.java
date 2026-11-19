@@ -25,6 +25,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
+/**
+ * 便签元数据的远端载体：本身是一条 Google Task，notes 字段里装本地便签的完整 JSON。
+ * 要解决的问题是——远端 Task 只有 name / notes 两个字段，装不下颜色、父目录、提醒时间。
+ * 通过 related gid 与真正的任务节点一对一绑定，因此它不参与本地 JSON 互转与动作判定，
+ * 对应的三个覆写方法一律抛 IllegalAccessError，把误用暴露在开发期而非同步期。
+ * 顺序上必须先写任务、再写 meta，否则首次同步的 meta 找不到可关联的 gid。
+ */
 public class MetaData extends Task {
     private final static String TAG = MetaData.class.getSimpleName();
 
