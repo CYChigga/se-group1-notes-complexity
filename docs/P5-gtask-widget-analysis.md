@@ -87,7 +87,7 @@ GTaskManager.sync 在边界处把异常统一映射为状态码：NetworkFailure
 
 - gtask.remote → ui：GTaskClient 引用 NotesPreferenceActivity 读取同步账户；GTaskASyncTask 引用 NotesListActivity 与 NotesPreferenceActivity 构造通知的跳转意图。也就是说“同步”这一层为了做登录和通知，必须知道具体 Activity 类。
 - ui → gtask.remote：NotesListActivity 与 NotesPreferenceActivity 直接调用 GTaskSyncService 的静态方法，并读取其静态状态（isSyncing / getProgressString）。
-- widget ↔ ui：widget 引用 NoteEditActivity / NotesListActivity 做点击跳转，ui 的两个 Activity 又引用 Provider 类来发广播，同样是双向。
+- widget ←→ ui：widget 引用 NoteEditActivity / NotesListActivity 做点击跳转，ui 的两个 Activity 又引用 Provider 类来发广播，同样是双向。
 
 成因是一致的：这两个包都承担了“导航”职责——发起方需要知道目标页面，而目标页面又需要触发方提供的服务。在 Android 里导航与业务常被放在同一层，静态工具方法与 Activity 直接互指的成本很低，因此这种耦合在项目里自然生长出来。
 
