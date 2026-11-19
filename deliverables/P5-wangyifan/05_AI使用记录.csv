@@ -1,0 +1,5 @@
+﻿工具,章节或文件,用途,人工验证人,验证方式
+WorkBuddy（DeepSeek-V4.1-Flash）,15 个 Java 文件,中文注释初稿（360 行）,待复核（孙浩）,逐文件比对注释与代码语义，检查 diff 仅含注释
+WorkBuddy（DeepSeek-V4.1-Flash）,docs/P5-gtask-widget-analysis.md 第 2–4 章,同步链路、widget 链路、模块依赖分析初稿,待复核（孙浩）,对照源码行号逐条核实调用关系
+WorkBuddy（DeepSeek-V4.1-Flash）,第 5 章、图P5-1~5,控制流图、节点/边表、V(G) 与独立路径,待复核（孙浩）,复算 E−N+2P 与判定条目+1，核对图文一致
+WorkBuddy（DeepSeek-V4.1-Flash）,Word / PDF 报告,排版与成文,待复核,检查乱码、裁切、表格溢出
