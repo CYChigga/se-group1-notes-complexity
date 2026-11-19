@@ -21,10 +21,30 @@ import android.content.Context;
 import android.content.Intent;
 
 public class AlarmReceiver extends BroadcastReceiver {
+    /**
+     * AlarmManager 与提醒界面之间的轻量转发器。
+     *
+     * 清单文件把本 Receiver 放在独立进程中，系统闹钟到时即使主应用进程
+     * 不存在也能收到广播。Receiver 不执行数据库或音频等耗时工作，
+     * 只保留原 Intent 中的便签 URI，并把目标改为 AlarmAlertActivity。
+     *
+     * 这种设计让广播回调尽快返回，后续锁屏展示、摘要查询和铃声播放都由
+     * 具有完整生命周期的 Activity 负责。
+     */
     @Override
     public void onReceive(Context context, Intent intent) {
+        /*
+         * 直接复用收到的 Intent，可保留设置闹钟时写入 data 的便签 URI。
+         * AlarmAlertActivity 会从该 URI 解析便签 id，因此此处不能新建一个
+         * 没有 data 的空 Intent。
+         */
         intent.setClass(context, AlarmAlertActivity.class);
+        /*
+         * BroadcastReceiver 的 Context 不属于任何 Activity 任务栈，
+         * 启动界面必须添加 NEW_TASK；否则系统会拒绝本次跳转。
+         */
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // 转交后立即返回，不在广播执行时间限制内进行提醒界面的实际工作。
         context.startActivity(intent);
     }
 }

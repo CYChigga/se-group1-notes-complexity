@@ -30,6 +30,12 @@ import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 
 public class DateTimePickerDialog extends AlertDialog implements OnClickListener {
+    /**
+     * DateTimePicker 的对话框包装层。
+     *
+     * Picker 负责编辑字段，本类用 Calendar 汇总完整时间、实时更新标题，
+     * 并只在用户点击确定按钮后把最终毫秒值交给调用方。
+     */
 
     private Calendar mDate = Calendar.getInstance();
     private boolean mIs24HourView;
@@ -41,12 +47,17 @@ public class DateTimePickerDialog extends AlertDialog implements OnClickListener
     }
 
     public DateTimePickerDialog(Context context, long date) {
+        /*
+         * 先注册字段变化监听器，再设置初始时间，保证标题与 Picker 状态一致。
+         * 秒字段被清零，使提醒精度与界面提供的“分钟”粒度相匹配。
+         */
         super(context);
         mDateTimePicker = new DateTimePicker(context);
         setView(mDateTimePicker);
         mDateTimePicker.setOnDateTimeChangedListener(new OnDateTimeChangedListener() {
             public void onDateTimeChanged(DateTimePicker view, int year, int month,
                     int dayOfMonth, int hourOfDay, int minute) {
+                // 每次滚轮变化都覆盖 Calendar 的五个可编辑字段，避免组合出旧字段。
                 mDate.set(Calendar.YEAR, year);
                 mDate.set(Calendar.MONTH, month);
                 mDate.set(Calendar.DAY_OF_MONTH, dayOfMonth);
@@ -65,14 +76,17 @@ public class DateTimePickerDialog extends AlertDialog implements OnClickListener
     }
 
     public void set24HourView(boolean is24HourView) {
+        // 该标志用于标题格式，Picker 自身的制式由其构造时的系统设置决定。
         mIs24HourView = is24HourView;
     }
 
     public void setOnDateTimeSetListener(OnDateTimeSetListener callBack) {
+        // 调用方可在 show 前注册；未注册时确认按钮只关闭对话框而不产生外部动作。
         mOnDateTimeSetListener = callBack;
     }
 
     private void updateTitle(long date) {
+        // 标题同时展示年月日和时间，让用户在滚轮之外再次核对完整提醒时刻。
         int flag =
             DateUtils.FORMAT_SHOW_YEAR |
             DateUtils.FORMAT_SHOW_DATE |
@@ -82,6 +96,7 @@ public class DateTimePickerDialog extends AlertDialog implements OnClickListener
     }
 
     public void onClick(DialogInterface arg0, int arg1) {
+        // 只有确定按钮绑定到本监听器，取消按钮使用空监听器，不会设置提醒。
         if (mOnDateTimeSetListener != null) {
             mOnDateTimeSetListener.OnDateTimeSet(this, mDate.getTimeInMillis());
         }

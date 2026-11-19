@@ -41,6 +41,14 @@ import java.io.IOException;
 
 
 public class AlarmAlertActivity extends Activity implements OnClickListener, OnDismissListener {
+    /**
+     * 提醒触发后的前台交互界面。
+     *
+     * AlarmReceiver 在独立进程中启动本 Activity，本类从 Intent.data 解析便签 id，
+     * 再读取摘要、唤醒屏幕并循环播放系统闹钟铃声。用户可以关闭提醒，
+     * 或在屏幕已点亮时直接进入对应便签。对话框消失是停止声音和结束界面的
+     * 统一出口，避免不同按钮路径遗留正在播放的 MediaPlayer。
+     */
     private long mNoteId;
     private String mSnippet;
     private static final int SNIPPET_PREW_MAX_LEN = 60;
@@ -48,6 +56,10 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        /*
+         * 提醒界面需要覆盖锁屏显示。若屏幕原本关闭，还要保持并点亮屏幕，
+         * 使用户无需先手动解锁即可看到提醒内容。窗口标志必须在创建对话框前设置。
+         */
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -64,6 +76,10 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
         Intent intent = getIntent();
 
         try {
+            /*
+             * AlarmManager 安排任务时把便签 URI 放入 Intent.data，第二段路径即便签 id。
+             * 摘要过长时截断并追加提示字符，防止锁屏对话框被大段正文撑满。
+             */
             mNoteId = Long.valueOf(intent.getData().getPathSegments().get(1));
             mSnippet = DataUtils.getSnippetById(this.getContentResolver(), mNoteId);
             mSnippet = mSnippet.length() > SNIPPET_PREW_MAX_LEN ? mSnippet.substring(0,
@@ -76,6 +92,7 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
 
         mPlayer = new MediaPlayer();
         if (DataUtils.visibleInNoteDatabase(getContentResolver(), mNoteId, Notes.TYPE_NOTE)) {
+            // 触发前再次验证便签可见，避免已经删除的记录仍弹出过期提醒。
             showActionDialog();
             playAlarmSound();
         } else {
@@ -84,11 +101,17 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
     }
 
     private boolean isScreenOn() {
+        // 屏幕状态决定是否提供“进入便签”按钮以及是否需要主动点亮屏幕。
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         return pm.isScreenOn();
     }
 
     private void playAlarmSound() {
+        /*
+         * 使用用户配置的系统默认闹钟铃声，并循环播放直到对话框关闭。
+         * MODE_RINGER_STREAMS_AFFECTED 是系统受静音模式影响的流集合，
+         * 这里据此选择播放所用音频流，然后按 MediaPlayer 状态顺序初始化。
+         */
         Uri url = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
 
         int silentModeStreams = Settings.System.getInt(getContentResolver(),
@@ -100,26 +123,35 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
             mPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
         }
         try {
+            // setDataSource、prepare、setLooping、start 的顺序不可交换，否则状态机会报错。
             mPlayer.setDataSource(this, url);
             mPlayer.prepare();
             mPlayer.setLooping(true);
             mPlayer.start();
         } catch (IllegalArgumentException e) {
+            // 铃声 URI 或参数非法时记录异常，提醒对话框仍可正常显示和关闭。
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (SecurityException e) {
+            // 系统拒绝读取铃声资源时不让异常终止提醒界面。
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IllegalStateException e) {
+            // MediaPlayer 状态异常说明初始化顺序或底层资源不可用，需要保留诊断信息。
             // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
+            // 铃声数据无法读取时只降级为无声提醒，用户仍能处理便签。
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
     }
 
     private void showActionDialog() {
+        /*
+         * 正按钮始终用于确认并关闭提醒；屏幕原本开启时才提供进入便签的负按钮。
+         * 无论点击按钮、返回键还是系统关闭对话框，OnDismissListener 都会负责清理声音。
+         */
         AlertDialog.Builder dialog = new AlertDialog.Builder(this);
         dialog.setTitle(R.string.app_name);
         dialog.setMessage(mSnippet);
@@ -131,8 +163,10 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
     }
 
     public void onClick(DialogInterface dialog, int which) {
+        // 只有“进入便签”需要导航；确认按钮保持默认分支，随后由 dismiss 统一收尾。
         switch (which) {
             case DialogInterface.BUTTON_NEGATIVE:
+                // 沿用提醒携带的便签 id，以 ACTION_VIEW 打开既有记录而不是新建便签。
                 Intent intent = new Intent(this, NoteEditActivity.class);
                 intent.setAction(Intent.ACTION_VIEW);
                 intent.putExtra(Intent.EXTRA_UID, mNoteId);
@@ -144,11 +178,16 @@ public class AlarmAlertActivity extends Activity implements OnClickListener, OnD
     }
 
     public void onDismiss(DialogInterface dialog) {
+        // 对话框生命周期结束即停止铃声并关闭透明 Activity，避免留在任务栈中。
         stopAlarmSound();
         finish();
     }
 
     private void stopAlarmSound() {
+        /*
+         * stop 后必须 release 才能归还音频资源，并把字段置空防止重复释放。
+         * 该判空也允许播放初始化失败后的清理路径安全执行。
+         */
         if (mPlayer != null) {
             mPlayer.stop();
             mPlayer.release();
