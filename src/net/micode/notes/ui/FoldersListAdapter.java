@@ -32,7 +32,8 @@ import net.micode.notes.data.Notes.NoteColumns;
 /**
  * “移动到文件夹”选择框的适配器：只查两列（id 与名称），
  * 根目录在界面上显示为“上一级文件夹”而不是数据库里的空名称。
- * 与 NotesListAdapter 不同，本适配器的游标由对话框持有，生命周期随对话框结束。
+ * 与 NotesListAdapter 不同：本适配器的游标在对话框内一次性用完即弃，
+ * 不参与列表刷新，也没有多选状态，因此实现上比 NotesListAdapter 简单得多。
  */
 public class FoldersListAdapter extends CursorAdapter {
     // 投影与列下标必须成对维护：改一处不改另一处会取错列。
@@ -44,11 +45,11 @@ public class FoldersListAdapter extends CursorAdapter {
     public static final int ID_COLUMN   = 0;
     public static final int NAME_COLUMN = 1;
 
-    // 构造时直接传入查询结果；注释保留 IDE 生成说明，不影响逻辑。
+    // 构造即传入查询结果：游标由适配器接管，本类与调用方都不再单独 close。
+    // 因此调用方必须先确认查询有结果，空游标传进来会让列表显示为空而不是报错。
     public FoldersListAdapter(Context context, Cursor c) {
         super(context, c);
         // TODO Auto-generated constructor stub
-    // 此行是 IDE 生成的占位注释，保留原样不改动逻辑。
     }
 
     // 行视图用内部类 FolderListItem（单行文本），结构比便签行简单得多。
@@ -81,7 +82,8 @@ public class FoldersListAdapter extends CursorAdapter {
 
         public FolderListItem(Context context) {
             super(context);
-            // 行布局在构造时 inflate，每个对话框只创建一次，随对话框销毁回收。
+            // 行布局在构造时 inflate：newView 只在没有可复用的 convertView 时被调用，
+            // 之后由 ListView 回收复用，因此不要在 bindView 里再 inflate。
             inflate(context, R.layout.folder_list_item, this);
             mName = (TextView) findViewById(R.id.tv_folder_name);
         }

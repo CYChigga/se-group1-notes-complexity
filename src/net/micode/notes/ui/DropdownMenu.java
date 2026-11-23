@@ -29,7 +29,7 @@ import net.micode.notes.R;
 
 /**
  * 下拉菜单封装：把一个 Button 和一个 PopupMenu 绑定起来，
- * 点击按钮弹出菜单，菜单标题写在按钮上（多选态下显示“已选择 N 项”）。
+ * 点击按钮弹出菜单，选中数量写在按钮上（多选态下显示「选中了 N 项」）。
  * 抽出来的原因是多选 ActionMode 的自定义视图里需要复用同一套交互，
  * 避免在 Activity 中重复写 PopupMenu 的构造与监听逻辑。
  */
@@ -55,7 +55,8 @@ public class DropdownMenu {
         });
     }
 
-    // 设置菜单项点击监听；菜单未创建时静默忽略，避免空指针。
+    // 设置菜单项点击监听。mPopupMenu 在构造后恒非空，此处的判空属防御性写法，
+    // 保证本类被继承或构造流程改动时不会抛空指针。
     public void setOnDropdownMenuItemClickListener(OnMenuItemClickListener listener) {
         if (mPopupMenu != null) {
             mPopupMenu.setOnMenuItemClickListener(listener);

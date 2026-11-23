@@ -787,6 +787,136 @@ for _rel, _blocks in FILES:
 
 MARKER = "P3-HANJIAYANG"
 
+# ---------------------------------------------------------------------------
+# 人工复核修正：第一轮生成后逐条比对代码，发现 8 处注释与实现不符或属占位式填充，
+# 在此以文本替换的方式订正，保证脚本重跑的结果与仓库中的最终文件完全一致。
+# 每条都是 (原文, 修正文)，作用于注入后的整份文件内容。
+# ---------------------------------------------------------------------------
+FIXES = [
+    # 1) 两个常量各挂一段重复说明，合并为一段挂在第一处
+    ("""    // 两个查询令牌：AsyncQueryHandler 用同一个回调分发两类查询，
+    // 靠 token 区分“便签列表”与“目标文件夹列表”，不能复用同一个值。
+    private static final int FOLDER_NOTE_LIST_QUERY_TOKEN = 0;
+
+    // 与便签列表查询共用一个回调，因此两个常量值必须不同。
+    private static final int FOLDER_LIST_QUERY_TOKEN      = 1;""",
+     """    // 两个查询令牌：AsyncQueryHandler 的两类查询共用一个 onQueryComplete 回调，
+    // 靠 token 区分「便签列表」与「可作为移动目标的文件夹列表」，两者不能取同一个值。
+    private static final int FOLDER_NOTE_LIST_QUERY_TOKEN = 0;
+
+    private static final int FOLDER_LIST_QUERY_TOKEN      = 1;"""),
+    # 2) changeCursor(null) 并不会触发重新查询，真正刷新在 onStart
+    ("""    // 编辑页返回后强制让适配器换一次游标（changeCursor(null) 会触发 CursorAdapter 重新查询），
+    // 比手动比对数据更省事；非本类的 requestCode 一律交回父类处理。""",
+     """    // 编辑页返回后先置空游标，让列表立刻清空、不残留刚被改过的旧数据；
+    // 真正的重新查询由随后回到前台的 onStart（startAsyncNotesListQuery）完成。
+    // 非本类的 requestCode 一律交回父类处理。"""),
+    # 3) 该处判断的真实意义是防资源缺失抛异常，不是“无法判空”
+    ("""                 // 资源 id 固定，若 res/raw/introduction 被删除会抛异常，因此这里判空后再读。""",
+     """                 // 资源缺失时 openRawResource 会抛 NotFoundException，先判空再读，
+                 // 避免首次启动因打包裁剪直接崩溃。"""),
+    # 4) 空实现要有理由，而不是“IDE 生成可清理”
+    ("""        // 返回 false 表示菜单不需要在每次显示时重建；
+        // 此处原为 IDE 生成的空实现，属已知可清理项。""",
+     """        // 返回 false 表示菜单无需在每次显示前重建：菜单内容（删除/移动/全选）已在
+        // onCreateActionMode 中一次性 inflate 完毕，此处没有需要随状态刷新的项。"""),
+    # 5) changeCursor 不负责重新查询
+    ("""                    // changeCursor 内部会关闭旧游标并触发重新查询，因此这里不需要手动 close。""",
+     """                    // changeCursor 会把旧游标关闭并接管新游标，因此这里不需要手动 close。"""),
+    # 6) 该游标实际从未被显式 close
+    ("""        // 适配器直接用查询结果构造，游标所有权随对话框转移，关闭时由系统回收。""",
+     """        // 适配器直接用查询结果构造，游标交给适配器持有；本方法及其后没有任何 close，
+        // 依靠对话框销毁、适配器被回收时由 GC 关闭（基线行为，未做修正）。"""),
+    # 7) startSearch 的四个参数原先说明错了两个
+    ("""    // 查询最终由 NotesProvider 的 searchSuggestions 处理；
+    // 第一个参数传 null 表示使用默认查询串，false 表示不自动拉起输入法。""",
+     """    // 查询最终由 NotesProvider 处理（URI_SEARCH_SUGGEST → 关键词 SQL）。
+    // 四个参数依次为：初始查询串（null 表示用搜索框当前文本）、是否预选中该串、
+    // 应用私有数据（此处不用）、是否强制走全局搜索——后两者传 false，即在本应用内搜索。"""),
+    # 8) 用的是触觉反馈而非震动
+    ("""    // 长按分派：便签进入多选模式（并触发一次震动反馈），文件夹则挂上上下文菜单监听。""",
+     """    // 长按分派：便签进入多选模式（成功后补一次长按触觉反馈），文件夹则挂上上下文菜单监听。"""),
+    # 9) NotesListItem：原注释给出的“顺序不可调换”理由不成立
+    ("""     * 把一条数据渲染到视图上。分支顺序不可调换：先判“通话记录文件夹”再判“其子条目”，
+     * 因为后者用父 id 判定，若顺序颠倒，文件夹自身也会走进子条目分支。
+     * 四类内容的差异：
+     * - 通话记录文件夹：标题为“文件夹名 + 条目数”，图标换成通话图标；""",
+     """     * 把一条数据渲染到视图上，四个分支与数据层的四种条目类型一一对应。
+     * 分支顺序：先判“通话记录文件夹本身”（用自身 id），再判“通话记录里的条目”（用父 id），
+     * 两个条件互斥——通话记录文件夹的父节点是根目录，不会落进子条目分支，故顺序不影响结果；
+     * 先写自身判定是为了让代码结构与 NoteItemData 的类型枚举保持同构，便于对照阅读。
+     * 四类内容的差异：
+     * - 通话记录文件夹：标题为固定的「通话记录」文案 + 条目数，图标换成通话图标，正文不显示来电人；"""),
+    ("""     * - 普通文件夹：标题同样拼接条目数，不显示告警图标；""",
+     """     * - 普通文件夹：标题为文件夹名 + 条目数，不显示告警图标；"""),
+    ("""        // 先判文件夹自身再判其子条目：文件夹用 id 判定，子条目用 parentId 判定，顺序不可交换。""",
+     """        // 先判文件夹自身再判其子条目：文件夹用 id 判定，子条目用 parentId 判定，两者互斥。"""),
+    # 10) FoldersListAdapter：两条“保留 IDE 注释”的填充改写为实质说明
+    ("""    // 构造时直接传入查询结果；注释保留 IDE 生成说明，不影响逻辑。
+    public FoldersListAdapter(Context context, Cursor c) {
+        super(context, c);
+        // TODO Auto-generated constructor stub
+    // 此行是 IDE 生成的占位注释，保留原样不改动逻辑。
+    }""",
+     """    // 构造即传入查询结果：游标由适配器接管，本类与调用方都不再单独 close。
+    // 因此调用方必须先确认查询有结果，空游标传进来会让列表显示为空而不是报错。
+    public FoldersListAdapter(Context context, Cursor c) {
+        super(context, c);
+        // TODO Auto-generated constructor stub
+    }"""),
+    ("""            // 行布局在构造时 inflate，每个对话框只创建一次，随对话框销毁回收。""",
+     """            // 行布局在构造时 inflate：newView 只在没有可复用的 convertView 时被调用，
+            // 之后由 ListView 回收复用，因此不要在 bindView 里再 inflate。"""),
+    (""" * 与 NotesListAdapter 不同，本适配器的游标由对话框持有，生命周期随对话框结束。""",
+     """ * 与 NotesListAdapter 不同：本适配器的游标在对话框内一次性用完即弃，
+ * 不参与列表刷新，也没有多选状态，因此实现上比 NotesListAdapter 简单得多。"""),
+    # 11) NotesListAdapter：原注释挂在错误的字段上
+    ("""    // mSelectedIndex 只记录被操作过的位置（含取消选中），未出现的位置视为未选中；
+    // mNotesCount 只统计 TYPE_NOTE 的条目，文件夹不计入，否则“全选”永远不成立。
+    private Context mContext;
+    // 位置到勾选状态的稀疏映射。切换多选模式时整体 clear，保证不残留上一次选择。
+    private HashMap<Integer, Boolean> mSelectedIndex;
+    // 便签总数（不含文件夹），只在数据变化或换游标时重算，供全选判定使用。
+    private int mNotesCount;
+    private boolean mChoiceMode;""",
+     """    // 保存上下文，供 getSelectedWidget 重建 NoteItemData 时使用——
+    // 通话记录条目要靠 ContentResolver 查来电人姓名，那一路没有 bindView 传入的 context。
+    private Context mContext;
+    // 位置到勾选状态的稀疏映射：只记录被操作过的位置（含被取消选中的），
+    // 未出现的位置一律视为未选中，因此不必为整张列表分配布尔数组。
+    private HashMap<Integer, Boolean> mSelectedIndex;
+    // 便签总数（不含文件夹），在 changeCursor 与 onContentChanged 时重算，
+    // 供 isAllSelected 判定“已全选”；若把文件夹也算进去，全选永远不会成立。
+    private int mNotesCount;
+    // 是否处于多选态。由 Activity 在 ActionMode 创建/销毁时置位，
+    // bindView 依赖它决定复选框的显示与否。
+    private boolean mChoiceMode;"""),
+    # 12) mPopupMenu 构造后恒非空，判空是防御性写法
+    ("""    // 设置菜单项点击监听；菜单未创建时静默忽略，避免空指针。""",
+     """    // 设置菜单项点击监听。mPopupMenu 在构造后恒非空，此处的判空属防御性写法，
+    // 保证本类被继承或构造流程改动时不会抛空指针。"""),
+    # 13) 按钮文案取自字符串资源 menu_select_title（“选中了 %d 项”）
+    (""" * 点击按钮弹出菜单，菜单标题写在按钮上（多选态下显示“已选择 N 项”）。""",
+     """ * 点击按钮弹出菜单，选中数量写在按钮上（多选态下显示「选中了 N 项」）。"""),
+]
+
+
+USED_FIXES = set()
+
+
+def apply_fixes(text, used):
+    """把命中的 FIXES 应用到整份文件文本上，并把命中的下标记入 used。
+
+    每条修正只针对某一个文件，因此这里跳过未命中的条目；
+    main() 结束时统一检查 used 是否覆盖全部条目，避免某条修正静默失效。
+    """
+    for i, (old, new) in enumerate(FIXES):
+        if old in text:
+            text = text.replace(old, new, 1)
+            used.add(i)
+    return text
+
+
 
 def render(block, style, indent):
     '“”把注释块渲染成带缩进的文本行。“”'
@@ -822,19 +952,21 @@ def annotate(path, blocks):
             raise SystemExit("%s: 第 %d 行重复定义注释" % (path, lineno))
         by_line[lineno] = (style, block)
 
+    orig_n = len(lines)
     out = []
-    added = 0
     for idx, line in enumerate(lines, start=1):
         if idx in by_line:
             style, block = by_line[idx]
             indent = line[: len(line) - len(line.lstrip())]
-            rendered = render(block, style, indent)
-            out.extend(rendered)
-            added += len(rendered)
+            out.extend(render(block, style, indent))
         out.append(line)
 
+    text = apply_fixes("\n".join(out), USED_FIXES)
+    final_n = len(text.split("\n"))
+    added = final_n - orig_n
+
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
-        fh.write("\n".join(out))
+        fh.write(text)
     return added, len(blocks)
 
 
@@ -856,6 +988,13 @@ def main():
         print("%-52s %3d 处 / 新增 %3d 行注释" % (rel, nblocks, added))
     print("-" * 78)
     print("合计：%d 处注释块，新增 %d 行注释" % (total_blocks, total_lines))
+
+    missing = [i for i in range(len(FIXES)) if i not in USED_FIXES]
+    if missing:
+        print("[WARN] 以下人工修正未命中任何文件：%s" % missing)
+        return 1
+    print("人工复核修正 %d 条全部命中" % len(FIXES))
+    return 0
 
 
 if __name__ == "__main__":

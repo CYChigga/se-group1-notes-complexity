@@ -87,11 +87,10 @@ import java.util.HashSet;
  * 因此本类里所有 Cursor 的生命周期都由适配器接管，本类不 close 游标。
  */
 public class NotesListActivity extends Activity implements OnClickListener, OnItemLongClickListener {
-    // 两个查询令牌：AsyncQueryHandler 用同一个回调分发两类查询，
-    // 靠 token 区分“便签列表”与“目标文件夹列表”，不能复用同一个值。
+    // 两个查询令牌：AsyncQueryHandler 的两类查询共用一个 onQueryComplete 回调，
+    // 靠 token 区分「便签列表」与「可作为移动目标的文件夹列表」，两者不能取同一个值。
     private static final int FOLDER_NOTE_LIST_QUERY_TOKEN = 0;
 
-    // 与便签列表查询共用一个回调，因此两个常量值必须不同。
     private static final int FOLDER_LIST_QUERY_TOKEN      = 1;
 
     // 文件夹右键菜单项 id，仅在 onContextItemSelected 中使用。
@@ -181,8 +180,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         setAppInfoFromRawRes();
     }
 
-    // 编辑页返回后强制让适配器换一次游标（changeCursor(null) 会触发 CursorAdapter 重新查询），
-    // 比手动比对数据更省事；非本类的 requestCode 一律交回父类处理。
+    // 编辑页返回后先置空游标，让列表立刻清空、不残留刚被改过的旧数据；
+    // 真正的重新查询由随后回到前台的 onStart（startAsyncNotesListQuery）完成。
+    // 非本类的 requestCode 一律交回父类处理。
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // 只看 RESULT_OK：用户按返回键取消编辑时列表无需刷新，省一次查询。
@@ -206,7 +206,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             StringBuilder sb = new StringBuilder();
             InputStream in = null;
             try {
-                 // 资源 id 固定，若 res/raw/introduction 被删除会抛异常，因此这里判空后再读。
+                 // 资源缺失时 openRawResource 会抛 NotFoundException，先判空再读，
+                 // 避免首次启动因打包裁剪直接崩溃。
                  in = getResources().openRawResource(R.raw.introduction);
                 if (in != null) {
                     InputStreamReader isr = new InputStreamReader(in);
@@ -350,8 +351,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
             }
         }
 
-        // 返回 false 表示菜单不需要在每次显示时重建；
-        // 此处原为 IDE 生成的空实现，属已知可清理项。
+        // 返回 false 表示菜单无需在每次显示前重建：菜单内容（删除/移动/全选）已在
+        // onCreateActionMode 中一次性 inflate 完毕，此处没有需要随状态刷新的项。
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
             // TODO Auto-generated method stub
             return false;
@@ -525,7 +526,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
             switch (token) {
                 case FOLDER_NOTE_LIST_QUERY_TOKEN:
-                    // changeCursor 内部会关闭旧游标并触发重新查询，因此这里不需要手动 close。
+                    // changeCursor 会把旧游标关闭并接管新游标，因此这里不需要手动 close。
                     mNotesListAdapter.changeCursor(cursor);
                     break;
                 case FOLDER_LIST_QUERY_TOKEN:
@@ -546,7 +547,8 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     // 随后提示移动条数与目标文件夹名，并结束多选态。
     private void showFolderListMenu(Cursor cursor) {
         AlertDialog.Builder builder = new AlertDialog.Builder(NotesListActivity.this);
-        // 适配器直接用查询结果构造，游标所有权随对话框转移，关闭时由系统回收。
+        // 适配器直接用查询结果构造，游标交给适配器持有；本方法及其后没有任何 close，
+        // 依靠对话框销毁、适配器被回收时由 GC 关闭（基线行为，未做修正）。
         builder.setTitle(R.string.menu_title_select_folder);
         final FoldersListAdapter adapter = new FoldersListAdapter(this, cursor);
         builder.setAdapter(adapter, new DialogInterface.OnClickListener() {
@@ -988,8 +990,9 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
     }
 
     // 调用系统搜索：searchable 配置在 AndroidManifest 的 meta-data 中，
-    // 查询最终由 NotesProvider 的 searchSuggestions 处理；
-    // 第一个参数传 null 表示使用默认查询串，false 表示不自动拉起输入法。
+    // 查询最终由 NotesProvider 处理（URI_SEARCH_SUGGEST → 关键词 SQL）。
+    // 四个参数依次为：初始查询串（null 表示用搜索框当前文本）、是否预选中该串、
+    // 应用私有数据（此处不用）、是否强制走全局搜索——后两者传 false，即在本应用内搜索。
     @Override
     public boolean onSearchRequested() {
         startSearch(null, false, null /* appData */, false);
@@ -1132,7 +1135,7 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 NoteColumns.MODIFIED_DATE + " DESC");
     }
 
-    // 长按分派：便签进入多选模式（并触发一次震动反馈），文件夹则挂上上下文菜单监听。
+    // 长按分派：便签进入多选模式（成功后补一次长按触觉反馈），文件夹则挂上上下文菜单监听。
     // 返回 false 表示不消费事件，长按后仍可继续走系统的其他处理。
     public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
         if (view instanceof NotesListItem) {

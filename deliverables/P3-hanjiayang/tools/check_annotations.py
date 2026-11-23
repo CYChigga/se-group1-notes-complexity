@@ -119,8 +119,8 @@ def main():
 
     ok = True
     total_comment = 0
-    print("%-30s %8s %8s %8s" % ("文件", "新增注释", "有效代码", "占 25%目标"))
-    print("-" * 60)
+    print("%-30s %8s %8s %8s %10s" % ("文件", "新增注释", "文件SLOC", "新增代码", "占25%目标"))
+    print("-" * 70)
     for rel in FILES:
         path = os.path.join(root, rel)
         cur = open(path, encoding="utf-8").read()
@@ -134,8 +134,8 @@ def main():
         total_comment += added_comment
         name = rel.rsplit("/", 1)[-1]
         target = SLOC[name] * 0.25
-        print("%-30s %8d %8d %8s" % (name, added_comment, added_code,
-                                     "%.0f%%" % (added_comment / target * 100)))
+        print("%-30s %8d %8d %8d %9s" % (name, added_comment, SLOC[name], added_code,
+                                         "%.0f%%" % (added_comment / target * 100)))
         if not same:
             print("  [FAIL] 去注释后与基线 %s 不一致，业务逻辑可能被改动" % BASE)
 

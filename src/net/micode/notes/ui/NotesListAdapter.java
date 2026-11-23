@@ -38,13 +38,17 @@ import java.util.Iterator;
  */
 public class NotesListAdapter extends CursorAdapter {
     private static final String TAG = "NotesListAdapter";
-    // mSelectedIndex 只记录被操作过的位置（含取消选中），未出现的位置视为未选中；
-    // mNotesCount 只统计 TYPE_NOTE 的条目，文件夹不计入，否则“全选”永远不成立。
+    // 保存上下文，供 getSelectedWidget 重建 NoteItemData 时使用——
+    // 通话记录条目要靠 ContentResolver 查来电人姓名，那一路没有 bindView 传入的 context。
     private Context mContext;
-    // 位置到勾选状态的稀疏映射。切换多选模式时整体 clear，保证不残留上一次选择。
+    // 位置到勾选状态的稀疏映射：只记录被操作过的位置（含被取消选中的），
+    // 未出现的位置一律视为未选中，因此不必为整张列表分配布尔数组。
     private HashMap<Integer, Boolean> mSelectedIndex;
-    // 便签总数（不含文件夹），只在数据变化或换游标时重算，供全选判定使用。
+    // 便签总数（不含文件夹），在 changeCursor 与 onContentChanged 时重算，
+    // 供 isAllSelected 判定“已全选”；若把文件夹也算进去，全选永远不会成立。
     private int mNotesCount;
+    // 是否处于多选态。由 Activity 在 ActionMode 创建/销毁时置位，
+    // bindView 依赖它决定复选框的显示与否。
     private boolean mChoiceMode;
 
     // 桌面小部件的标识对（id + 类型）。删除/移动便签后要据此逐个刷新小部件。
