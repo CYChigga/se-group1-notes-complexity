@@ -75,10 +75,13 @@ def normalize(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
+BASE = "b94cc39"
+
+
 def git_show_head(root, rel):
     try:
         return subprocess.check_output(
-            ["git", "-C", root, "show", "HEAD:" + rel], text=True, encoding="utf-8"
+            ["git", "-C", root, "show", BASE + ":" + rel], text=True, encoding="utf-8"
         )
     except subprocess.CalledProcessError:
         return None
@@ -87,7 +90,7 @@ def git_show_head(root, rel):
 def count_added_comment_lines(root, rel):
     """用 git diff 统计新增的纯注释行。"""
     diff = subprocess.check_output(
-        ["git", "-C", root, "diff", "-U0", "--", rel],
+        ["git", "-C", root, "diff", "-U0", BASE, "--", rel],
         text=True, encoding="utf-8",
     )
     added_code, added_comment = 0, 0
@@ -106,10 +109,13 @@ def count_added_comment_lines(root, rel):
 
 
 def main():
+    global BASE
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
+    ap.add_argument("--base", default="b94cc39", help="比对基线 commit（默认 P3 分支起点 b94cc39）")
     args = ap.parse_args()
     root = args.root
+    BASE = args.base
 
     ok = True
     total_comment = 0
@@ -131,7 +137,7 @@ def main():
         print("%-30s %8d %8d %8s" % (name, added_comment, added_code,
                                      "%.0f%%" % (added_comment / target * 100)))
         if not same:
-            print("  [FAIL] 去注释后与基线不一致，业务逻辑可能被改动")
+            print("  [FAIL] 去注释后与基线 %s 不一致，业务逻辑可能被改动" % BASE)
 
     total_sloc = sum(SLOC.values())
     print("-" * 60)
