@@ -7,3 +7,4 @@ AI 编码助手,03_流程与图表/图P3-1,组织结构图布局与坐标,韩家
 AI 编码助手,03_流程与图表/图P3-2,列表查询流程图节点与判定条件,韩家阳,对照 NotesListActivity.startAsyncNotesListQuery/onQueryComplete 与 NotesListItem.bind 逐个节点核实行号与条件
 AI 编码助手,tools/check_annotations.py,注释量与逻辑零改动的校验脚本,韩家阳,用两个已知样例（删一行代码、改一个标识符）验证脚本能报 FAIL
 AI 编码助手,06_复核记录.md,对 PR #2 的问题核对,韩家阳,回到基线 b94cc39 查看 DateTimePickerDialog.java:83 与 AlarmAlertActivity.java:66-74 确认问题成立
+AI 编码助手,09_注释复核记录.md,逐条比对 388 行注释与实现，列出 17 处不符并给出修正,韩家阳,按 09 中的行号打开对应代码逐条确认；建议先核第 1、5、10 条（分别对应事实错误、编造因果、占位填充）
