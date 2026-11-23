@@ -1,0 +1,127 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="org">
+    <mxGraphModel dx="900" dy="600" grid="1" gridSize="10" guides="1" page="1" pageWidth="1120" pageHeight="800">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ui" value="ui  表现层
+14 文件 / 3056 SLOC / 41.3%
+列表页·编辑页·设置页·提醒·日期选择" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#3B6FD4;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="90" width="400" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="widget" value="widget  桌面小部件
+3 文件 / 145 SLOC / 2.0%
+2x 与 4x 两种尺寸" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#E8F0FE;strokeColor=#3B6FD4;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="520" y="90" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="model" value="model  领域模型
+2 文件 / 455 SLOC / 6.2%
+Note·WorkingNote 状态机" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FDF3E7;strokeColor=#C07C1F;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="tool" value="tool  工具
+4 文件 / 678 SLOC / 9.2%
+备份·数据变换·资源解析" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#FDF3E7;strokeColor=#C07C1F;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="430" y="280" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="gtask_remote" value="gtask.remote  同步
+4 文件 / 1264 SLOC / 17.1%
+会话·增量同步·SyncService" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#EAF6EC;strokeColor=#3F8A4E;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="740" y="280" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="gtask_exc" value="gtask.exception
+2 文件 / 26 SLOC / 0.4%
+网络/动作异常" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#EAF6EC;strokeColor=#3F8A4E;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="430" y="470" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="gtask_data" value="gtask.data  同步模型
+6 文件 / 1143 SLOC / 15.5%
+Task·TaskList·SqlNote" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#EAF6EC;strokeColor=#3F8A4E;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="740" y="470" width="300" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="data" value="data  数据层
+4 文件 / 628 SLOC / 8.5%
+ContentProvider·SQLite·URI 契约" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F1ECF7;strokeColor=#6B4C9A;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="640" width="620" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="e0" value="状态读写" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="200" y="200" as="sourcePoint" />
+            <mxPoint x="200" y="280" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e1" value="格式化" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="380" y="200" as="sourcePoint" />
+            <mxPoint x="555" y="280" as="targetPoint" />
+            <Array as="points"><mxPoint x="380" y="240" /><mxPoint x="555" y="240" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="刷新" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="460" y="145" as="sourcePoint" />
+            <mxPoint x="520" y="145" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="启停同步" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="440" y="200" as="sourcePoint" />
+            <mxPoint x="890" y="280" as="targetPoint" />
+            <Array as="points"><mxPoint x="440" y="245" /><mxPoint x="890" y="245" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="读便签" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="145" as="sourcePoint" />
+            <mxPoint x="680" y="695" as="targetPoint" />
+            <Array as="points"><mxPoint x="1090" y="145" /><mxPoint x="1090" y="695" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="工具调用" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="360" y="330" as="sourcePoint" />
+            <mxPoint x="430" y="330" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="增删改查" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="210" y="380" as="sourcePoint" />
+            <mxPoint x="210" y="640" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="批量操作" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="355" as="sourcePoint" />
+            <mxPoint x="455" y="640" as="targetPoint" />
+            <Array as="points"><mxPoint x="395" y="355" /><mxPoint x="395" y="615" /><mxPoint x="455" y="615" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="组装任务" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="890" y="380" as="sourcePoint" />
+            <mxPoint x="890" y="470" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="抛出异常" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="380" as="sourcePoint" />
+            <mxPoint x="600" y="470" as="targetPoint" />
+            <Array as="points"><mxPoint x="830" y="430" /><mxPoint x="600" y="430" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="映射为本地行" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="890" y="560" as="sourcePoint" />
+            <mxPoint x="700" y="640" as="targetPoint" />
+            <Array as="points"><mxPoint x="890" y="610" /><mxPoint x="700" y="610" /></Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
