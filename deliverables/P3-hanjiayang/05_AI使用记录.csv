@@ -1,0 +1,9 @@
+﻿工具,章节或文件,用途,人工验证人,验证方式
+AI 编码助手,src/net/micode/notes/ui/六文件中文注释,按行级锚点插入解释性注释（做什么/为什么/边界条件）,韩家阳,用 tools/check_annotations.py 剥离注释后与基线 b94cc39 逐文件比对 token 序列完全一致；再人工通读确认每条注释与实现相符
+AI 编码助手,01_报告章节.md 第 2.1 节,功能清单与类映射的初稿整理,韩家阳,对照 AndroidManifest 组件声明与各包 import 逐条核对功能归属
+AI 编码助手,01_报告章节.md 第 2.3 节,包级 SLOC 加总表,韩家阳,用 metrics/baseline/files.csv 的 sloc 列复算 8 个子包合计=7395
+AI 编码助手,01_报告章节.md 第 2.4 节,import 依赖关系与环依赖分析,韩家阳,对基线 39 个文件 grep 关键字 import net.micode.notes 复算依赖矩阵；三处环依赖逐条回到源文件确认
+AI 编码助手,03_流程与图表/图P3-1,组织结构图布局与坐标,韩家阳,逐包核对图中的文件数与 SLOC 与 files.csv 一致；在 draw.io 打开 .drawio 确认可编辑
+AI 编码助手,03_流程与图表/图P3-2,列表查询流程图节点与判定条件,韩家阳,对照 NotesListActivity.startAsyncNotesListQuery/onQueryComplete 与 NotesListItem.bind 逐个节点核实行号与条件
+AI 编码助手,tools/check_annotations.py,注释量与逻辑零改动的校验脚本,韩家阳,用两个已知样例（删一行代码、改一个标识符）验证脚本能报 FAIL
+AI 编码助手,06_复核记录.md,对 PR #2 的问题核对,韩家阳,回到基线 b94cc39 查看 DateTimePickerDialog.java:83 与 AlarmAlertActivity.java:66-74 确认问题成立

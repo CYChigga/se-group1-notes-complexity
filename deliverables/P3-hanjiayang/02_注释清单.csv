@@ -1,0 +1,7 @@
+﻿文件路径,新增注释行数,对应commit号
+src/net/micode/notes/ui/NotesListActivity.java,201,2b79e72
+src/net/micode/notes/ui/NotesPreferenceActivity.java,81,fd94d2c
+src/net/micode/notes/ui/NotesListAdapter.java,41,3587e3b
+src/net/micode/notes/ui/NotesListItem.java,26,d3d4123
+src/net/micode/notes/ui/FoldersListAdapter.java,14,6704e2f
+src/net/micode/notes/ui/DropdownMenu.java,13,2e44c86
