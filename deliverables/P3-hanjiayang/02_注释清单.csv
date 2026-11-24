@@ -2,6 +2,6 @@
 src/net/micode/notes/ui/NotesListActivity.java,204,26860d75,78138c95
 src/net/micode/notes/ui/NotesPreferenceActivity.java,81,5b98b837,78138c95
 src/net/micode/notes/ui/NotesListAdapter.java,45,bf300034,78138c95
-src/net/micode/notes/ui/NotesListItem.java,28,7f967e1c,78138c95
+src/net/micode/notes/ui/NotesListItem.java,28,7f967e1c,78138c95 / 84705145
 src/net/micode/notes/ui/FoldersListAdapter.java,16,bf3f7396,78138c95
-src/net/micode/notes/ui/DropdownMenu.java,14,7c8268d4,78138c95
+src/net/micode/notes/ui/DropdownMenu.java,14,7c8268d4,78138c95 / 84705145
