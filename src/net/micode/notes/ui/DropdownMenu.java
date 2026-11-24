@@ -55,8 +55,8 @@ public class DropdownMenu {
         });
     }
 
-    // 设置菜单项点击监听。mPopupMenu 在构造后恒非空，此处的判空属防御性写法，
-    // 保证本类被继承或构造流程改动时不会抛空指针。
+    // 设置菜单项点击监听。mPopupMenu 在构造函数里就建好了，正常情况不会为空；
+    // 判空只是留着兜底，万一以后改构造顺序或有人继承本类，也不会突然崩在这。
     public void setOnDropdownMenuItemClickListener(OnMenuItemClickListener listener) {
         if (mPopupMenu != null) {
             mPopupMenu.setOnMenuItemClickListener(listener);
