@@ -7,3 +7,7 @@ project.properties
 .settings/
 .classpath
 .project
+
+# Python 缓存（P3 图表/校验脚本产生）
+__pycache__/
+*.pyc

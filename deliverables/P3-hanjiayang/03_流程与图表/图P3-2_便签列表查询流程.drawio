@@ -1,0 +1,175 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="flow">
+    <mxGraphModel dx="900" dy="600" grid="1" gridSize="10" guides="1" page="1" pageWidth="1080" pageHeight="1080">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="s" value="进入列表页 / 从编辑页返回" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DEEBF7;strokeColor=#2E75B6;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="380" y="70" width="320" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="onStart() → startAsyncNotesListQuery()" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="380" y="132" width="320" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" value="mCurrentFolderId
+== ID_ROOT_FOLDER ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="370" y="200" width="340" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="selection = ROOT_FOLDER_SELECTION
+排除 TYPE_SYSTEM；通话记录文件夹
+仅在 NOTES_COUNT > 0 时出现" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="320" width="340" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="selection = NORMAL_SELECTION
+PARENT_ID = mCurrentFolderId
+子文件夹内条目全部列出" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="680" y="320" width="340" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="AsyncQueryHandler.startQuery()
+URI = CONTENT_NOTE_URI；PROJECTION = NoteItemData.PROJECTION
+排序：TYPE DESC, MODIFIED_DATE DESC" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#E2EFDA;strokeColor=#548235;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="300" y="445" width="480" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="后台线程经 NotesProvider 查询 SQLite" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=13;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="300" y="550" width="480" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="onQueryComplete()
+token = 便签列表令牌 ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#BF9000;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="300" y="625" width="480" height="87" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="mNotesListAdapter.changeCursor(cursor)
+calcNotesCount() 重算便签总数" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="60" y="742" width="410" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="弹出文件夹选择框
+（FOLDER_LIST_QUERY_TOKEN）" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#DEEBF7;strokeColor=#2E75B6;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="742" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="NotesListItem.bind() 按条目类型选择渲染分支
+（多选态下仅便签显示复选框）" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=12;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="180" y="852" width="720" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="b1" value="通话记录文件夹
+标题 + 条目数" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="972" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="b2" value="通话记录条目
+副标题 = 来电人" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="300" y="972" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="b3" value="普通文件夹
+标题 + 条目数" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="560" y="972" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="b4" value="普通便签
+摘要 + 提醒图标" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#F7F7F7;strokeColor=#7F7F7F;fontSize=11;strokeWidth=1.5;" vertex="1" parent="1">
+          <mxGeometry x="820" y="972" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="e0" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="112" as="sourcePoint" />
+            <mxPoint x="540" y="132" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e1" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="180" as="sourcePoint" />
+            <mxPoint x="540" y="200" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" value="是" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="244" as="sourcePoint" />
+            <mxPoint x="230" y="320" as="targetPoint" />
+            <Array as="points"><mxPoint x="230" y="244" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" value="否" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="710" y="244" as="sourcePoint" />
+            <mxPoint x="850" y="320" as="targetPoint" />
+            <Array as="points"><mxPoint x="850" y="244" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="230" y="415" as="sourcePoint" />
+            <mxPoint x="300" y="485" as="targetPoint" />
+            <Array as="points"><mxPoint x="230" y="485" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="850" y="415" as="sourcePoint" />
+            <mxPoint x="780" y="485" as="targetPoint" />
+            <Array as="points"><mxPoint x="850" y="485" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="525" as="sourcePoint" />
+            <mxPoint x="540" y="550" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="600" as="sourcePoint" />
+            <mxPoint x="540" y="625" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="是" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="668" as="sourcePoint" />
+            <mxPoint x="265" y="742" as="targetPoint" />
+            <Array as="points"><mxPoint x="265" y="668" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" value="否" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="780" y="668" as="sourcePoint" />
+            <mxPoint x="930" y="742" as="targetPoint" />
+            <Array as="points"><mxPoint x="930" y="668" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="265" y="822" as="sourcePoint" />
+            <mxPoint x="265" y="852" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="180" y="892" as="sourcePoint" />
+            <mxPoint x="120" y="972" as="targetPoint" />
+            <Array as="points"><mxPoint x="120" y="892" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="400" y="932" as="sourcePoint" />
+            <mxPoint x="400" y="972" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="660" y="932" as="sourcePoint" />
+            <mxPoint x="660" y="972" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" value="" style="endArrow=block;html=1;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="920" y="932" as="sourcePoint" />
+            <mxPoint x="920" y="972" as="targetPoint" />
+            <Array as="points"></Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
