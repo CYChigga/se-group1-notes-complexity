@@ -1,10 +1,12 @@
 ﻿工具,章节或文件,用途,人工验证人,验证方式
-AI 编码助手,src/net/micode/notes/ui/六文件中文注释,按行级锚点插入解释性注释（做什么/为什么/边界条件）,韩家阳,用 tools/check_annotations.py 剥离注释后与基线 b94cc39 逐文件比对 token 序列完全一致；再人工通读确认每条注释与实现相符
-AI 编码助手,01_报告章节.md 第 2.1 节,功能清单与类映射的初稿整理,韩家阳,对照 AndroidManifest 组件声明与各包 import 逐条核对功能归属
-AI 编码助手,01_报告章节.md 第 2.3 节,包级 SLOC 加总表,韩家阳,用 metrics/baseline/files.csv 的 sloc 列复算 8 个子包合计=7395
-AI 编码助手,01_报告章节.md 第 2.4 节,import 依赖关系与环依赖分析,韩家阳,对基线 39 个文件 grep 关键字 import net.micode.notes 复算依赖矩阵；三处环依赖逐条回到源文件确认
-AI 编码助手,03_流程与图表/图P3-1,组织结构图布局与坐标,韩家阳,逐包核对图中的文件数与 SLOC 与 files.csv 一致；在 draw.io 打开 .drawio 确认可编辑
-AI 编码助手,03_流程与图表/图P3-2,列表查询流程图节点与判定条件,韩家阳,对照 NotesListActivity.startAsyncNotesListQuery/onQueryComplete 与 NotesListItem.bind 逐个节点核实行号与条件
-AI 编码助手,tools/check_annotations.py,注释量与逻辑零改动的校验脚本,韩家阳,用两个已知样例（删一行代码、改一个标识符）验证脚本能报 FAIL
-AI 编码助手,06_复核记录.md,对 PR #2 的问题核对,韩家阳,回到基线 b94cc39 查看 DateTimePickerDialog.java:83 与 AlarmAlertActivity.java:66-74 确认问题成立
-AI 编码助手,09_注释复核记录.md,逐条比对 388 行注释与实现，列出 17 处不符并给出修正,韩家阳,按 09 中的行号打开对应代码逐条确认；建议先核第 1、5、10 条（分别对应事实错误、编造因果、占位填充）
+WorkBuddy,src/net/micode/notes/ui/ 六文件中文注释,按行级锚点插入解释性注释（做什么/为什么/边界条件）,谢鸿,抽 10 条逐条对照源码核对（清单见 10_注释抽检记录.md）；并用 工具脚本/check_annotations.py 剥离注释后与基线 b94cc39 比对 token 序列 6 文件全部一致
+WorkBuddy,01_报告章节.md 第 2.1 节,功能清单与类映射的初稿整理,谢鸿,对照 AndroidManifest 的 4 个 Activity 与 Service/Receiver/Provider 声明逐条核对功能归属
+WorkBuddy,01_报告章节.md 第 2.3 节,包级 SLOC 加总表与类数口径,谢鸿,用 deliverables/P2-sunhao/metrics/baseline/files.csv 的 sloc 列复算 8 个子包合计=7395；另按 class/interface/enum 分别重数得 45/8/1 与第 1 章对齐
+WorkBuddy,01_报告章节.md 第 2.4 节,import 依赖关系与环依赖分析,谢鸿,对基线 39 个文件检索 import net.micode.notes 复算依赖矩阵；ui↔tool、ui↔widget、ui↔gtask.remote 三处环依赖回到源文件确认
+WorkBuddy,03_流程与图表/图P3-1_模块组织结构图,组织结构图布局与坐标,谢鸿,逐包核对图中文件数与 SLOC 与 files.csv 一致；用 draw.io 打开 .drawio 确认可编辑、PNG 为 300dpi
+WorkBuddy,03_流程与图表/图P3-2_便签列表查询流程,列表查询流程图节点与判定条件,谢鸿,对照 NotesListActivity.startAsyncNotesListQuery / onQueryComplete 与 NotesListItem.bind 逐个节点核实行号与条件
+WorkBuddy,工具脚本/check_annotations.py,注释量与逻辑零改动的校验脚本,谢鸿,用两个已知样例（删一行代码、改一个标识符）验证脚本能报 FAIL；再对 6 个真实文件跑出 PASS
+WorkBuddy,06_复核记录.md,对 PR #2（P4）的问题核对,谢鸿,回到基线 b94cc39 查看 DateTimePickerDialog.java:80 与 AlarmAlertActivity.java:66-74 确认问题成立
+WorkBuddy,09_注释复核记录.md,逐条比对 388 行注释与实现并列出 17 处不符,谢鸿,按 09 中的行号打开对应代码逐条确认；重点核第 1、5、10 条（分别对应事实错误、编造因果、占位填充）
+WorkBuddy,10_注释抽检记录.md,抽 10 条注释回源码验证,谢鸿,按表中的文件行号逐条打开源码比对；涉及界面文案的另查 res/values-zh-rCN/strings.xml
+WorkBuddy,01_P3报告章节_韩家阳.docx,Markdown 转 Word 排版（标题层级/表号/图注/页脚页码）,谢鸿,用 python-docx 与 document.xml 核对 2 张图比例（1.401 / 1.000）、4 张表列数、Heading 1/2/3 层级与页脚页码域
