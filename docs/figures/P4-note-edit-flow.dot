@@ -1,0 +1,32 @@
+digraph P4NoteEditFlow {
+  graph [rankdir=TB, bgcolor="white", pad="0.3", nodesep="0.28", ranksep="0.38"];
+  node [fontname="Microsoft YaHei", fontsize=11, shape=box, style="rounded,filled", color="#1F4E78", fillcolor="#EAF2F8", margin="0.18,0.10"];
+  edge [fontname="Microsoft YaHei", fontsize=10, color="#1F4E78"];
+  start [label="进入 NoteEditActivity", shape=oval, fillcolor="#FFFFFF"];
+  intent [label="Intent 是否为 ACTION_VIEW？", shape=diamond, fillcolor="#FFF2CC"];
+  visible [label="已有便签且记录可见？", shape=diamond, fillcolor="#FFF2CC"];
+  load [label="WorkingNote.load 加载已有便签"];
+  invalid [label="提示不存在并 finish", fillcolor="#FCE4D6"];
+  create [label="创建内存 WorkingNote\n（暂不写数据库）"];
+  edit [label="初始化编辑控件并收集用户输入"];
+  worth [label="是否值得保存？\n非空新便签且有有效变化", shape=diamond, fillcolor="#FFF2CC"];
+  skip [label="不写数据库，返回", fillcolor="#FCE4D6"];
+  persist [label="无 id 则插入主记录\n随后同步 note 与 data 差异"];
+  widget [label="绑定有效 Widget？", shape=diamond, fillcolor="#FFF2CC"];
+  refresh [label="触发 Widget 刷新回调"];
+  end [label="设置 RESULT_OK 并返回列表", shape=oval, fillcolor="#FFFFFF"];
+  start -> intent;
+  intent -> visible [label="是"];
+  intent -> create [label="否：ACTION_INSERT_OR_EDIT"];
+  visible -> load [label="是"];
+  visible -> invalid [label="否"];
+  load -> edit;
+  create -> edit;
+  edit -> worth;
+  worth -> skip [label="否"];
+  worth -> persist [label="是"];
+  persist -> widget;
+  widget -> refresh [label="是"];
+  widget -> end [label="否"];
+  refresh -> end;
+}

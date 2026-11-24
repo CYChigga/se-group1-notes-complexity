@@ -4,17 +4,33 @@
 
 P4 覆盖 `ui` 包中便签编辑、清单编辑、日期时间选择和提醒触发相关的 8 个文件。本次工作只增加中文注释和分析文档，不修改业务逻辑。
 
+### 1.1 代码来源与本次贡献边界
+
+本分支中的 Java 业务逻辑来自 MiCode Notes 项目基线，不属于谢鸿或 AI 在本次任务中新开发的代码。本次代码侧成果是对既有源码增加中文解释性注释，并形成调用链和代码质量分析。Git 提交所显示的作者账号用于记录分支提交者，不代表提交中的每一行内容均由该账号持有人独立撰写。
+
+| 工作内容 | AI 完成或辅助 | 谢鸿完成或负责 |
+|---|---|---|
+| 原有 Java 业务逻辑 | 未编写、未修改，仅用于阅读和分析 | 确认任务范围，不认领原项目业务代码 |
+| 8 个 Java 文件的中文注释 | 梳理源码并起草、写入 370 行净增解释性注释（371 新增、1 删除） | 指定任务目标和修改边界，决定采用并负责最终提交；逐段人工复核仍需完成 |
+| 调用链、流程步骤和质量问题 | 生成初稿，整理证据并执行静态差异检查 | 确认报告需要及呈现范围，负责最终审核与取舍 |
+| 分支、提交和 Pull Request | 按指令执行 Git 与 GitHub 操作 | 确认账号、分支策略、PR 内容和提交决定 |
+| Android 功能验证 | 未进行真机测试，仅完成静态检查 | 12/24 小时制、空便签提醒和锁屏提醒的设备验证尚待完成 |
+
+以上划分依据为本分支相对 `b94cc39` 基线的 Git 差异、提交记录和实际操作过程。PR 未添加 AI 或其他账号为共同作者；AI 使用情况通过本文档和课程报告披露。
+
 | 文件 | 主要职责 | 新增注释行 |
 |---|---|---:|
 | `NoteEditActivity.java` | 编辑界面生命周期、内容保存、清单模式、提醒与 Widget 联动 | 139 |
 | `NoteEditText.java` | 清单项输入、回车拆行、退格合并和链接菜单 | 37 |
 | `NoteItemData.java` | 列表查询结果映射、通话便签信息和游标位置判断 | 32 |
 | `DateTimePicker.java` | 日期、小时、分钟、AM/PM 滚轮及跨日边界 | 66 |
-| `DateTimePickerDialog.java` | 时间选择器包装、标题刷新和确认回调 | 16 |
+| `DateTimePickerDialog.java` | 时间选择器包装、标题刷新和确认回调 | 15（净增；16 新增、1 行末尾换行删除） |
 | `AlarmAlertActivity.java` | 锁屏提醒、摘要展示、铃声播放和进入便签 | 39 |
 | `AlarmInitReceiver.java` | 设备启动后重新注册未来提醒 | 22 |
 | `AlarmReceiver.java` | 将系统闹钟广播转交给提醒界面 | 20 |
-| 合计 |  | 371 |
+| 合计 |  | 370（净增） |
+
+统计口径：基线 `b94cc39` 到整改前 P4 成果提交 `50a6464` 的 Java 差异为 **371 行新增、1 行删除，净增 370 行**。删除行是 `DateTimePickerDialog.java` 的文件末尾换行调整，不涉及业务逻辑；因此报告中的注释工作量按 370 行净增记载。
 
 ## 2 文件职责与调用关系
 
@@ -110,32 +126,11 @@ NoteEditActivity.setReminder
 8. 新便签先插入主记录，随后主表和正文差异经 ContentProvider 写入 SQLite。
 9. 如绑定 Widget，则发送刷新广播；最后返回列表并刷新展示。
 
-### 4.2 流程图草稿
+### 4.2 程序流程图
 
-```mermaid
-flowchart TD
-    A[进入编辑界面] --> B{Intent 类型}
-    B -->|ACTION_VIEW| C[验证并加载已有便签]
-    B -->|ACTION_INSERT_OR_EDIT| D[创建内存 WorkingNote]
-    C --> E{正文模式}
-    D --> E
-    E -->|普通文本| F[显示单个编辑框]
-    E -->|清单| G[拆分条目并创建复选框与编辑框]
-    F --> H[用户编辑或修改设置]
-    G --> H
-    H --> I{离开或显式保存}
-    I --> J[收集界面文本]
-    J --> K{值得保存}
-    K -->|否| L[不写数据库]
-    K -->|是且无 id| M[插入 note 主记录]
-    K -->|是且已有 id| N[同步差异]
-    M --> N
-    N --> O[写入 note 与 data 表]
-    O --> P{绑定 Widget}
-    P -->|是| Q[发送 Widget 更新广播]
-    P -->|否| R[返回列表]
-    Q --> R
-```
+![编辑便签程序流程图](figures/P4-note-edit-flow.png)
+
+图中菱形均对应真实判断：`NoteEditActivity.initActivityState` 的 `ACTION_VIEW` 判断与记录可见性判断（201–242 行）；`WorkingNote.isWorthSaving` 的有效保存判断（219–226 行）；`WorkingNote.saveNote` 的新建记录判断（190–213 行）；以及 Widget 是否需要刷新（204–208 行）。这张图不把“用户离开界面”当作判定，而是把它作为触发 `saveNote` 的事件。
 
 ## 5 设置提醒流程
 
@@ -154,30 +149,11 @@ flowchart TD
 11. 用户删除提醒时，使用同一便签 URI 取得等价 PendingIntent 并调用 `AlarmManager.cancel`。
 12. 设备重启后，`AlarmInitReceiver` 查询数据库中未来提醒并逐条重新注册。
 
-### 5.2 流程图草稿
+### 5.2 程序流程图
 
-```mermaid
-flowchart TD
-    A[选择设置提醒] --> B[打开日期时间对话框]
-    B --> C[调整日期和时间]
-    C --> D{确认或取消}
-    D -->|取消| E[不改变提醒]
-    D -->|确认| F[WorkingNote 写入提醒时间]
-    F --> G{便签已有 id}
-    G -->|否| H[先保存便签]
-    G -->|是| I[构造含便签 URI 的 PendingIntent]
-    H --> J{保存成功}
-    J -->|否| K[提示空便签无法设置提醒]
-    J -->|是| I
-    I --> L[AlarmManager 安排 RTC_WAKEUP]
-    L --> M[时间到达或设备被唤醒]
-    M --> N[AlarmReceiver 转发]
-    N --> O[AlarmAlertActivity 验证便签]
-    O --> P[显示摘要并循环播放铃声]
-    P --> Q{用户操作}
-    Q -->|关闭| R[停止铃声并结束]
-    Q -->|进入便签| S[打开 NoteEditActivity]
-```
+![提醒触发程序流程图](figures/P4-alarm-alert-flow.png)
+
+该图聚焦 `AlarmAlertActivity` 的提醒触发过程。菱形分别对应：Intent 的 URI 与路径段能否被解析（83 行，当前实现只捕获 `IllegalArgumentException`）、便签是否仍可见（94 行）以及铃声初始化是否在 `setDataSource → prepare → start` 的 try 块内成功（125–146 行）。URI 解析失败时，现有实现仅 `return` 而不 `finish()`；图中如实保留该路径，且它正是 7.3 的问题来源。
 
 ## 6 代码质量优点
 
@@ -185,17 +161,37 @@ flowchart TD
 
 `NoteEditActivity` 只收集界面状态，`WorkingNote` 维护编辑期状态，`Note` 负责差异同步，`NotesProvider` 负责数据库路由。该分层避免 Activity 到处拼接 SQL，也使“空便签不保存”和“无变化不更新”等规则集中在模型层。
 
+- 源码位置：`NoteEditActivity.java:941-958`，`WorkingNote.java:190-226`，`NotesProvider.java:94-151`。
+
 ### 6.2 采用差异更新减少写入
 
 `WorkingNote.setWorkingText` 仅在字符串变化时记录正文差异，`WorkingNote.saveNote` 也会过滤无变化对象。这样可减少数据库写入、内容通知和 Widget 刷新。
+
+- 源码位置：`WorkingNote.java:190-213`、`219-226`、`284-289`。
 
 ### 6.3 清单编辑事件职责清楚
 
 `NoteEditText` 只判断键盘和焦点事件，通过接口通知 Activity；父容器负责 View 的插入、删除和重排。子控件不直接操作兄弟节点，降低了界面结构耦合。
 
+- 源码位置：`NoteEditText.java:68-101`、`164-210`；`NoteEditActivity.java:851-922`。
+
 ### 6.4 提醒具有重启恢复机制
 
 编辑页设置提醒后由 AlarmManager 调度，设备重启后 `AlarmInitReceiver` 又会从数据库恢复未来提醒，避免重启导致提醒永久丢失。
+
+- 源码位置：`NoteEditActivity.java:709-742`，`AlarmInitReceiver.java:52-86`。
+
+### 6.5 全项目级优点：数据契约集中定义
+
+`Notes` 类集中定义 Provider 的 authority、内容 URI、MIME 类型、系统文件夹 id 和跨组件 Intent extra。调用方不必散落地拼写这些协议字符串，Provider、ui、model、widget 与同步模块可共享同一份数据契约，降低 URI 或字段名不一致的风险。
+
+- 来源与位置：第 1 章数据契约表；`src/net/micode/notes/data/Notes.java:20-62`、`64-167`。
+
+### 6.6 全项目级优点：WorkingNote 以差量维护编辑状态
+
+`WorkingNote` 将界面编辑中的正文和设置变化保存在差量对象中，只有文本实际改变、记录未删除且值得保存时才创建或同步数据库记录。该机制既避免空便签和无变化记录重复写库，也使编辑界面、持久化与 Widget 刷新能通过明确的保存边界协作。
+
+- 来源与位置：孙浩 P2 对状态模型的分析；`src/net/micode/notes/model/WorkingNote.java:190-226`、`284-289`。
 
 ## 7 代码质量问题与改进建议
 
@@ -243,17 +239,34 @@ flowchart TD
 - 多条便签提醒使用相同 requestCode 时，必须依靠不同的 Intent.data 保持 PendingIntent 唯一。
 - 设备重启后只恢复当前时间之后的普通便签提醒，不恢复过期提醒和文件夹记录。
 
-## 9 AI 辅助与人工验证记录
+## 9 工作归属与 AI 辅助记录
 
 ### 9.1 AI 辅助范围
 
-- 辅助梳理 8 个目标文件及 `WorkingNote`、`Note`、`NotesProvider` 的调用链。
-- 辅助起草中文解释性注释、流程步骤、流程图草稿和质量问题候选。
-- 辅助统计新增注释行，并检查 Git 差异是否涉及业务代码。
+- 阅读并梳理 8 个目标文件及 `WorkingNote`、`Note`、`NotesProvider` 的调用链。
+- 起草并写入中文解释性注释，整理流程步骤、带判定分支的程序流程图和代码质量问题。
+- 统计新增注释行，检查 Git 差异是否涉及业务逻辑，并协助执行分支、提交和 PR 操作。
 
-### 9.2 人工复核要求
+### 9.2 谢鸿完成与负责范围
+
+- 明确本人负责 P4 ui 编辑与提醒任务，并确定只增加注释、不修改业务逻辑的边界。
+- 确认代码保存目录、GitHub 账号、分支策略、PR 内容以及不添加共同作者的提交要求。
+- 决定采用 AI 辅助生成的注释和分析材料，并对最终提交、课程报告和学术诚信披露负责。
+- 尚未完成的逐段源码复核和 Android 设备验证不得表述为已完成的个人工作。
+
+### 9.3 后续人工复核要求
 
 - 逐段确认注释与源码实际行为一致，尤其是清单模式和日期滚轮边界。
 - 复核两张流程图是否满足课程报告版式和符号规范。
 - 在可用的旧版 Android 构建环境或设备上验证 12/24 小时制、空便签提醒和锁屏提醒。
 - 由组内非主责成员复核问题结论；韩家阳建立 GitHub 账号后再补充线上 reviewer 记录。
+
+### 9.4 可核对的 AI 使用记录
+
+详细记录见 [P4-ai-usage-record.csv](P4-ai-usage-record.csv)。当前记录区分了 AI 的生成对象、使用用途、指定复核人、已完成的自查动作和仍待完成的独立复核；不把未完成的韩家阳复核写成已经完成。
+
+## 10 提交与统计证据
+
+- 整改前 P4 成果包含 9 个提交：8 个 `annot(P4)` 逐文件注释提交与 1 个 `doc(P4)` 分析提交。
+- Java 变更为 371 行新增、1 行删除，净增 370 行；8 个目标文件均未新增或修改业务逻辑。
+- 本次整改产生的文档、流程图和 AI 记录使用单独的 `doc(P4)` / `fig(P4)` 提交，不计入上述原始成果提交数。

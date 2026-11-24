@@ -1,0 +1,27 @@
+digraph P4AlarmAlertFlow {
+  graph [rankdir=TB, bgcolor="white", pad="0.3", nodesep="0.28", ranksep="0.38"];
+  node [fontname="Microsoft YaHei", fontsize=11, shape=box, style="rounded,filled", color="#1F4E78", fillcolor="#EAF2F8", margin="0.18,0.10"];
+  edge [fontname="Microsoft YaHei", fontsize=10, color="#1F4E78"];
+  start [label="AlarmReceiver 启动 AlarmAlertActivity", shape=oval, fillcolor="#FFFFFF"];
+  uri [label="Intent.data 的 URI 与路径段\n能否解析便签 id？", shape=diamond, fillcolor="#FFF2CC"];
+  return [label="catch 后 return\n（现实现未 finish）", fillcolor="#FCE4D6"];
+  visible [label="便签仍在数据库中可见？", shape=diamond, fillcolor="#FFF2CC"];
+  finish [label="finish", fillcolor="#FCE4D6"];
+  dialog [label="读取摘要并展示锁屏提醒"];
+  play [label="setDataSource → prepare → start"];
+  success [label="铃声初始化与启动成功？", shape=diamond, fillcolor="#FFF2CC"];
+  sounding [label="循环播放铃声或无声提醒"];
+  dismiss [label="关闭或进入便签\n停止并 release MediaPlayer"];
+  end [label="结束提醒 Activity", shape=oval, fillcolor="#FFFFFF"];
+  start -> uri;
+  uri -> visible [label="是"];
+  uri -> return [label="否"];
+  visible -> dialog [label="是"];
+  visible -> finish [label="否"];
+  dialog -> play;
+  play -> success;
+  success -> sounding [label="是 / 否（catch 后）"];
+  sounding -> dismiss;
+  dismiss -> end;
+  finish -> end;
+}
