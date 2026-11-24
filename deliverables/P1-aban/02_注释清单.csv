@@ -1,5 +1,5 @@
 ﻿文件路径,新增注释行数,对应commit号
-src/net/micode/notes/data/NotesDatabaseHelper.java,47,b964a73
-src/net/micode/notes/data/NotesProvider.java,53,c42305e
-src/net/micode/notes/data/Notes.java,50,9385fc9
-src/net/micode/notes/data/Contact.java,16,2b42d64
+src/net/micode/notes/data/NotesDatabaseHelper.java,73,b964a73
+src/net/micode/notes/data/NotesProvider.java,64,94805f5
+src/net/micode/notes/data/Notes.java,47,94805f5
+src/net/micode/notes/data/Contact.java,13,94805f5
