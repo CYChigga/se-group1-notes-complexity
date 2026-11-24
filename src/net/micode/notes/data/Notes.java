@@ -61,7 +61,7 @@ public class Notes {
 
     // note 表的字段名常量
     public interface NoteColumns {
-        // 行唯一 id，INTEGER(long)
+        // 数据库自增主键，插入成功后才有值；0 和负数被系统文件夹占着，正常便签都大于 0
         public static final String ID = "_id";
 
         // 所属父级 id（便签的父是文件夹，文件夹的父是上一级文件夹），INTEGER(long)
@@ -97,7 +97,7 @@ public class Notes {
         // 记录类型：文件夹还是便签，INTEGER
         public static final String TYPE = "type";
 
-        // 最后同步 id，INTEGER(long)
+        // 同步时对应远端的行 id，没同步过的便签这里是 0
         public static final String SYNC_ID = "sync_id";
 
         // 标记本地是否被修改过，INTEGER
@@ -115,7 +115,7 @@ public class Notes {
 
     // data 表的字段名常量
     public interface DataColumns {
-        // 行唯一 id，INTEGER(long)
+        // data 表自己的主键，和 note 表的 id 不是一回事
         public static final String ID = "_id";
 
         // 该行数据的 MIME 类型，TEXT

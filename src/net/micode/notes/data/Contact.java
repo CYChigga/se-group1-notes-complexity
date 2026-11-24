@@ -28,6 +28,7 @@ import java.util.HashMap;
 // 联系人辅助类：根据电话号码反查联系人姓名，带内存缓存
 public class Contact {
     // 缓存表，key 是电话号码，value 是对应的联系人姓名
+    // 缓存是 static 的，进程活着就一直在，联系人改名后这里不会自动更新
     private static HashMap<String, String> sContactCache;
     private static final String TAG = "Contact";
 
@@ -39,6 +40,7 @@ public class Contact {
             + " FROM phone_lookup"
             + " WHERE min_match = '+')";
 
+    // 按号码查联系人姓名，查不到返回 null；通话记录便签用它显示联系人名字
     public static String getContact(Context context, String phoneNumber) {
         // 第一次调用时初始化缓存表
         if(sContactCache == null) {
@@ -51,8 +53,10 @@ public class Contact {
         }
 
         // 把 SQL 里的 "+" 替换成系统算出的最小匹配长度，提高匹配精度
+        // 系统通讯录按号码后几位建了索引，toCallerIDMinMatch 取的就是用于匹配的后缀
         String selection = CALLER_ID_SELECTION.replace("+",
                 PhoneNumberUtils.toCallerIDMinMatch(phoneNumber));
+        // 只取 DISPLAY_NAME 一列，够用就行，少查点数据
         Cursor cursor = context.getContentResolver().query(
                 Data.CONTENT_URI,
                 new String [] { Phone.DISPLAY_NAME },
